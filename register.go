@@ -2,7 +2,7 @@ package apex
 
 import "github.com/prometheus/client_golang/prometheus"
 
-func (m *Metrics) RegisterCounter(name string, labels []string) {
+func (m *Metrics) NewCounter(name string, labels []string) {
 	n, err := m.nameBuilder(name)
 	if err != nil {
 		m.metrics[name] = m.mErrorInvalid
@@ -19,7 +19,7 @@ func (m *Metrics) RegisterCounter(name string, labels []string) {
 	}
 }
 
-func (m *Metrics) RegisterGauge(name string, labels []string) {
+func (m *Metrics) NewGauge(name string, labels []string) {
 	n, err := m.nameBuilder(name)
 	if err != nil {
 		m.metrics[name] = m.mErrorInvalid
@@ -36,7 +36,7 @@ func (m *Metrics) RegisterGauge(name string, labels []string) {
 	}
 }
 
-func (m *Metrics) RegisterSummary(name string, labels []string) {
+func (m *Metrics) NewSummary(name string, labels []string) {
 	n, err := m.nameBuilder(name)
 	if err != nil {
 		m.metrics[name] = m.mErrorInvalid
@@ -53,7 +53,7 @@ func (m *Metrics) RegisterSummary(name string, labels []string) {
 	}
 }
 
-func (m *Metrics) RegisterHistogram(name string, labels []string, buckets []float64) {
+func (m *Metrics) NewHistogram(name string, labels []string, buckets []float64) {
 	n, err := m.nameBuilder(name)
 	if err != nil {
 		m.metrics[name] = m.mErrorInvalid

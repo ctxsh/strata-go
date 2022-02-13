@@ -14,7 +14,7 @@ func TestInc(t *testing.T) {
 		# TYPE test_counter_inc counter
 	`
 	m := New(MetricsOpts{MustRegister: true})
-	m.RegisterCounter("test_counter_inc", []string{"this"})
+	m.NewCounter("test_counter_inc", []string{"this"})
 	c := m.getCounter("test_counter_inc")
 
 	m.CounterInc("test_counter_inc", Labels{"this": "one"})
@@ -33,7 +33,7 @@ func TestInc(t *testing.T) {
 
 func TestIncMismatchedLabels(t *testing.T) {
 	m := New(MetricsOpts{MustRegister: true})
-	m.RegisterCounter("test_counter_mismatch_inc", []string{"this", "that"})
+	m.NewCounter("test_counter_mismatch_inc", []string{"this", "that"})
 
 	assert.Equal(t, 0, testutil.CollectAndCount(m.mPanicRecovery))
 	assert.NotPanics(t, assert.PanicTestFunc(func() {
@@ -51,7 +51,7 @@ func TestAdd(t *testing.T) {
 		# TYPE test_counter_add counter
 	`
 	m := New(MetricsOpts{MustRegister: true})
-	m.RegisterCounter("test_counter_add", []string{"this"})
+	m.NewCounter("test_counter_add", []string{"this"})
 	c := m.getCounter("test_counter_add")
 
 	m.CounterAdd("test_counter_add", 2.0, Labels{"this": "one"})
@@ -70,7 +70,7 @@ func TestAdd(t *testing.T) {
 
 func TestAddMismatchedLabels(t *testing.T) {
 	m := New(MetricsOpts{MustRegister: true})
-	m.RegisterCounter("test_counter_mismatched_add", []string{"this", "that"})
+	m.NewCounter("test_counter_mismatched_add", []string{"this", "that"})
 
 	assert.Equal(t, 0, testutil.CollectAndCount(m.mPanicRecovery))
 	assert.NotPanics(t, assert.PanicTestFunc(func() {
