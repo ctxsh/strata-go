@@ -9,8 +9,8 @@ import (
 
 func run(m *apex.Metrics) {
 	for {
-		m.Inc("inc_counter", apex.Labels{"region": "us-east-1"})
-		m.Incv("incv_counter", 5.0, apex.Labels{"region": "us-east-1"})
+		m.CounterInc("inc_counter", apex.Labels{"region": "us-east-1"})
+		m.CounterAdd("add_counter", 5.0, apex.Labels{"region": "us-east-1"})
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -25,8 +25,8 @@ func main() {
 		Separator:    ':',
 	})
 
-	metrics.Register(apex.Counter, "inc_counter", []string{"region"})
-	metrics.Register(apex.Counter, "incv_counter", []string{"region"})
+	metrics.RegisterCounter("inc_counter", []string{"region"})
+	metrics.RegisterCounter("add_counter", []string{"region"})
 	metrics.Start(wg)
 
 	wg.Add(1)

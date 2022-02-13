@@ -5,7 +5,7 @@
 MAKEFLAGS += --silent
 
 test:
-	go test ./...
+	go test -race -cover ./...
 
 clean:
 	rm bin/$(PROJECT)
