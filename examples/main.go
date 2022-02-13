@@ -25,8 +25,8 @@ func main() {
 		Separator:    ':',
 	})
 
-	metrics.RegisterCounter("inc_counter", []string{"region"})
-	metrics.RegisterCounter("add_counter", []string{"region"})
+	metrics.NewCounter("inc_counter", []string{"region"})
+	metrics.NewCounter("add_counter", []string{"region"})
 	metrics.Start(wg)
 
 	wg.Add(1)
