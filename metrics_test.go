@@ -14,7 +14,7 @@ func TestRegisterInvalidName(t *testing.T) {
 	assert.NotPanics(t, assert.PanicTestFunc(func() {
 		// Uncaught:
 		// Panic value:	panic: descriptor Desc{...} is invalid: "test.metric" is not a valid metric name [recovered]
-		m.Register(Counter, "test.metric", []string{"this", "that"})
+		m.RegisterCounter("test.metric", []string{"this", "that"})
 	}))
 	assert.Equal(t, 1, testutil.CollectAndCount(m.mPanicRecovery))
 }

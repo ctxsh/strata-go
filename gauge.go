@@ -1,11 +1,58 @@
 package apex
 
-func (m *Metrics) Set(value float64, labels Labels) {}
+import "github.com/prometheus/client_golang/prometheus"
 
-func (m *Metrics) Add(value float64, labels Labels) {}
+func (m *Metrics) GaugeSet(name string, value float64, labels Labels) {
+	defer m.recover(name, "gauge_inc")
 
-func (m *Metrics) Sub(value float64, labels Labels) {}
+	if gauge := m.getGauge(name); gauge != nil {
+		gauge.With(prometheus.Labels(labels)).Set(value)
+	} else {
+		m.mInvalidGauge.WithLabelValues(name).Inc()
+	}
+}
 
-// func (m *Metrics) getGauge(name string) {}
+func (m *Metrics) GaugeInc(name string, labels Labels) {
+	defer m.recover(name, "gauge_inc")
 
-// func (m *Metrics) registerGauge(name string, labels []string) (*prometheus.GaugeVec, error) {}
+	if gauge := m.getGauge(name); gauge != nil {
+		gauge.With(prometheus.Labels(labels)).Inc()
+	} else {
+		m.mInvalidGauge.WithLabelValues(name).Inc()
+	}
+}
+
+func (m *Metrics) GaugeDec(name string, labels Labels) {
+	defer m.recover(name, "gauge_dec")
+
+	if gauge := m.getGauge(name); gauge != nil {
+		gauge.With(prometheus.Labels(labels)).Inc()
+	} else {
+		m.mInvalidGauge.WithLabelValues(name).Inc()
+	}
+}
+
+func (m *Metrics) GaugeAdd(name string, value float64, labels Labels) {
+	defer m.recover(name, "gauge_add")
+	if gauge := m.getGauge(name); gauge != nil {
+		gauge.With(prometheus.Labels(labels)).Add(value)
+	} else {
+		m.mInvalidGauge.WithLabelValues(name).Inc()
+	}
+}
+
+func (m *Metrics) GaugeSub(name string, value float64, labels Labels) {
+	defer m.recover(name, "gauge_add")
+	if gauge := m.getGauge(name); gauge != nil {
+		gauge.With(prometheus.Labels(labels)).Sub(value)
+	} else {
+		m.mInvalidGauge.WithLabelValues(name).Inc()
+	}
+}
+
+func (m *Metrics) getGauge(name string) *prometheus.GaugeVec {
+	if metric, can := m.metrics[name]; can {
+		return metric.(*prometheus.GaugeVec)
+	}
+	return nil
+}

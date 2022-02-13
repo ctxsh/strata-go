@@ -10,13 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type Metric int
 type Labels prometheus.Labels
-
-const (
-	Counter Metric = iota
-	Gauge
-)
 
 type MetricsOpts struct {
 	Namespace    string
@@ -28,38 +22,24 @@ type MetricsOpts struct {
 }
 
 type Metrics struct {
-	counters map[string]*prometheus.CounterVec
-	opts     MetricsOpts
+	metrics map[string]prometheus.Collector
+	opts    MetricsOpts
 
-	mErrorUnknown  *prometheus.CounterVec
 	mErrorInvalid  *prometheus.CounterVec
 	mPanicRecovery *prometheus.CounterVec
+	// New style of handling (try not to panic)
+	mInvalidCounter *prometheus.CounterVec
+	mInvalidGauge   *prometheus.GaugeVec
+	mInvalidTimer   *prometheus.HistogramVec
 }
 
 func New(opts MetricsOpts) *Metrics {
 	m := &Metrics{
-		counters: make(map[string]*prometheus.CounterVec),
+		metrics: make(map[string]prometheus.Collector),
 	}
 	m.opts = defaults(opts)
 	m.init()
 	return m
-}
-
-func (m *Metrics) Register(ptype Metric, name string, labels []string) {
-	switch ptype {
-	case Counter:
-		metric, err := m.newCounter(name, labels)
-		if err != nil {
-			m.ErrorInvalidInc(Labels{
-				"name": name,
-				"kind": "counter",
-			})
-		}
-		if err := m.register(metric); err == nil {
-			m.counters[name] = metric
-		}
-	}
-
 }
 
 func (m *Metrics) Start(wg sync.WaitGroup) {
@@ -71,38 +51,6 @@ func (m *Metrics) Start(wg sync.WaitGroup) {
 		addr := fmt.Sprintf("localhost:%d", m.opts.Port)
 		_ = http.ListenAndServe(addr, mux)
 	}()
-}
-
-func (m *Metrics) init() {
-	var name string
-
-	name, _ = m.nameBuilder("error_unknown")
-	m.mErrorUnknown = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: m.opts.Namespace,
-		Subsystem: m.opts.Subsystem,
-		Name:      name,
-	}, []string{"name", "kind"})
-
-	name, _ = m.nameBuilder("error_invalid")
-	m.mErrorInvalid = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: m.opts.Namespace,
-		Subsystem: m.opts.Subsystem,
-		Name:      name,
-	}, []string{"name", "kind"})
-
-	name, _ = m.nameBuilder("panic_recovery")
-	m.mPanicRecovery = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: m.opts.Namespace,
-		Subsystem: m.opts.Subsystem,
-		Name:      name,
-	}, []string{"name", "method"})
-
-	// This is the only place we want to panic as if these are
-	// broken, we don't have any insights into what is going on
-	// with the collectors.
-	prometheus.MustRegister(m.mErrorUnknown)
-	prometheus.MustRegister(m.mErrorInvalid)
-	prometheus.MustRegister(m.mPanicRecovery)
 }
 
 func (m *Metrics) nameBuilder(name string) (string, error) {
@@ -125,35 +73,48 @@ func (m *Metrics) nameBuilder(name string) (string, error) {
 	return builder.String(), nil
 }
 
-func (m *Metrics) register(metric prometheus.Collector) error {
-	defer m.recover("notset", "recover")
-	err := prometheus.Register(metric)
-	if err != nil && m.opts.MustRegister {
-		panic(err)
-	} else if err != nil {
-		return RegistrationFailed
-	}
-	return nil
-}
-
 func (m *Metrics) recover(name string, method string) {
-	// Add logging through the logging interface later
 	if r := recover(); r != nil {
-		m.PanicRecoveryInc(Labels{
+		m.mPanicRecovery.With(prometheus.Labels{
 			"name":   name,
 			"method": method,
-		})
+		}).Inc()
 	}
 }
 
-func (m *Metrics) ErrorUnknownInc(labels Labels) {
-	m.mErrorUnknown.With(prometheus.Labels(labels)).Inc()
-}
+func (m *Metrics) init() {
+	var name string
 
-func (m *Metrics) ErrorInvalidInc(labels Labels) {
-	m.mErrorInvalid.With(prometheus.Labels(labels)).Inc()
-}
+	name, _ = m.nameBuilder("panic_recovery")
+	m.mPanicRecovery = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: name,
+	}, []string{"name", "method"})
 
-func (m *Metrics) PanicRecoveryInc(labels Labels) {
-	m.mPanicRecovery.With(prometheus.Labels(labels)).Inc()
+	name, _ = m.nameBuilder("panic_recovery")
+	m.mErrorInvalid = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: name,
+	}, []string{"name", "method"})
+
+	name, _ = m.nameBuilder("invalid_counter")
+	m.mInvalidCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: name,
+	}, []string{"name"})
+
+	name, _ = m.nameBuilder("invalid_gauge")
+	m.mInvalidGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: name,
+	}, []string{"name"})
+
+	name, _ = m.nameBuilder("invalid_timer")
+	m.mInvalidTimer = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: m.opts.Namespace,
+		Subsystem: m.opts.Subsystem,
+		Name:      name,
+	}, []string{"name"})
+
+	m.register(m.mErrorInvalid)
+	m.register(m.mPanicRecovery)
+	m.register(m.mInvalidCounter)
+	m.register(m.mInvalidGauge)
+	m.register(m.mInvalidTimer)
 }
