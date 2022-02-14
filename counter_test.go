@@ -8,30 +8,39 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInc(t *testing.T) {
-	const metadata = `
-		# HELP test_counter_inc created automagically by apex
-		# TYPE test_counter_inc counter
-	`
+func TestCounterInc(t *testing.T) {
+	name := "test_counter"
+	help := "created automagically by apex"
+	labels := Labels{"this": "one"}
 	m := New(MetricsOpts{MustRegister: true})
-	m.NewCounter("test_counter_inc", []string{"this"})
-	c := m.getCounter("test_counter_inc")
+	m.NewCounter(name, []string{"this"})
+	c := m.getCounter(name)
 
-	m.CounterInc("test_counter_inc", Labels{"this": "one"})
-	expected := `
-		test_counter_inc{this="one"} 1
-	`
-	assert.NoError(t, testutil.CollectAndCompare(c, strings.NewReader(metadata+expected)), "test_counter_inc")
-
-	m.CounterInc("test_counter_inc", Labels{"this": "one"})
-	expected = `
-		test_counter_inc{this="one"} 2
-	`
-	assert.NoError(t, testutil.CollectAndCompare(c, strings.NewReader(metadata+expected)), "test_counter_inc")
-
+	m.CounterInc(name, labels)
+	expected := buildProm(t, name, help, "counter", labels, 1)
+	assert.NoError(t, testutil.CollectAndCompare(c, strings.NewReader(expected)), "name")
+	m.CounterInc(name, labels)
+	expected = buildProm(t, name, help, "counter", labels, 2)
+	assert.NoError(t, testutil.CollectAndCompare(c, strings.NewReader(expected)), "name")
 }
 
-func TestIncMismatchedLabels(t *testing.T) {
+func TestCounterAdd(t *testing.T) {
+	name := "test_counter"
+	help := "created automagically by apex"
+	labels := Labels{"this": "one"}
+	m := New(MetricsOpts{MustRegister: true})
+	m.NewCounter(name, []string{"this"})
+	c := m.getCounter(name)
+
+	m.CounterAdd(name, 5, labels)
+	expected := buildProm(t, name, help, "counter", labels, 5)
+	assert.NoError(t, testutil.CollectAndCompare(c, strings.NewReader(expected)), "name")
+	m.CounterAdd(name, 6, labels)
+	expected = buildProm(t, name, help, "counter", labels, 11)
+	assert.NoError(t, testutil.CollectAndCompare(c, strings.NewReader(expected)), "name")
+}
+
+func TestCounterIncMismatchedLabels(t *testing.T) {
 	m := New(MetricsOpts{MustRegister: true})
 	m.NewCounter("test_counter_mismatch_inc", []string{"this", "that"})
 
@@ -39,36 +48,13 @@ func TestIncMismatchedLabels(t *testing.T) {
 	assert.NotPanics(t, assert.PanicTestFunc(func() {
 		// Uncaught:
 		// Panic value:	inconsistent label cardinality: expected 2 label values but got 1 in prometheus.Labels{"name":"test.metrics"}
-		m.CounterInc("test_counter_mismatch_inc", Labels{"this": "one"})
+		m.CounterInc("test_counter_mismatch", Labels{"this": "one"})
 	}))
 
 	assert.Equal(t, 1, testutil.CollectAndCount(m.mPanicRecovery))
 }
 
-func TestAdd(t *testing.T) {
-	const metadata = `
-		# HELP test_counter_add created automagically by apex
-		# TYPE test_counter_add counter
-	`
-	m := New(MetricsOpts{MustRegister: true})
-	m.NewCounter("test_counter_add", []string{"this"})
-	c := m.getCounter("test_counter_add")
-
-	m.CounterAdd("test_counter_add", 2.0, Labels{"this": "one"})
-	expected := `
-		test_counter_add{this="one"} 2
-	`
-	assert.NoError(t, testutil.CollectAndCompare(c, strings.NewReader(metadata+expected)), "test_counter_add")
-
-	m.CounterAdd("test_counter_add", 2.0, Labels{"this": "one"})
-	expected = `
-		test_counter_add{this="one"} 4
-	`
-	assert.NoError(t, testutil.CollectAndCompare(c, strings.NewReader(metadata+expected)), "test_counter_add")
-
-}
-
-func TestAddMismatchedLabels(t *testing.T) {
+func TestCounterAddMismatchedLabels(t *testing.T) {
 	m := New(MetricsOpts{MustRegister: true})
 	m.NewCounter("test_counter_mismatched_add", []string{"this", "that"})
 
@@ -80,4 +66,24 @@ func TestAddMismatchedLabels(t *testing.T) {
 	}))
 
 	assert.Equal(t, 1, testutil.CollectAndCount(m.mPanicRecovery))
+}
+
+func TestCounterIncInvalidCounter(t *testing.T) {
+	m := New(MetricsOpts{MustRegister: true})
+	assert.Equal(t, 0, testutil.CollectAndCount(m.mInvalidCounter))
+	assert.NotPanics(t, assert.PanicTestFunc(func() {
+		m.CounterInc("were_is_waldo", Labels{"this": "one"})
+	}))
+
+	assert.Equal(t, 1, testutil.CollectAndCount(m.mInvalidCounter))
+}
+
+func TestCounterAddInvalidCounter(t *testing.T) {
+	m := New(MetricsOpts{MustRegister: true})
+	assert.Equal(t, 0, testutil.CollectAndCount(m.mInvalidCounter))
+	assert.NotPanics(t, assert.PanicTestFunc(func() {
+		m.CounterAdd("were_is_waldo", 1.0, Labels{"this": "one"})
+	}))
+
+	assert.Equal(t, 1, testutil.CollectAndCount(m.mInvalidCounter))
 }
