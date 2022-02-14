@@ -1,16 +1,25 @@
 # Apex Metrics Package
-Wrappers around the prometheus client
 
+Wrappers around the prometheus client.
+
+TODO: More documentation.
 
 ```go
-m := New(MetricsOpts{
-  Namespace: "apex",
-  Subsystem: "httpserver",
-  Port: 8080,
-  MustRegister: true,
-}).Start(wg)
+metrics := apex.New(apex.MetricsOpts{
+		Namespace:    "apex",
+		Subsystem:    "example",
+		MustRegister: true,
+		Separator:    ':',
+	})
 
-m.Register(metrics.Counter, "http:response:count", []string{"path", "code"})
+	metrics.NewCounter("my_counter_metric", []string{"env"})
+	metrics.NewGauge("my_gauge_metric", []string{"region"})
+  metrics.NewHistogram("my_latency_metric", []string{"path"}, []float64{0.5, 0.9, 0.99})
 
-m.Inc("http:response:count", Labels{"path": "/", "code": 204})
+  m.CounterInc("my_counter_metric", apex.Labels{"env": "production"})
+	m.GaugeSet("my_gauge_metric", 100, apex.Labels{"region": "us-east-1"})
+
+  timer := metrics.NewTimer("my_latency_metric", apex.Labels{"path": "/blog"})
+  defer timer.ObserveDuration()
+
 ```

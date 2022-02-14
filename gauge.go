@@ -3,7 +3,7 @@ package apex
 import "github.com/prometheus/client_golang/prometheus"
 
 func (m *Metrics) GaugeSet(name string, value float64, labels Labels) {
-	defer m.recover(name, "gauge_inc")
+	defer m.recover(name, "gauge_set")
 
 	if gauge := m.getGauge(name); gauge != nil {
 		gauge.With(prometheus.Labels(labels)).Set(value)
@@ -26,9 +26,9 @@ func (m *Metrics) GaugeDec(name string, labels Labels) {
 	defer m.recover(name, "gauge_dec")
 
 	if gauge := m.getGauge(name); gauge != nil {
-		gauge.With(prometheus.Labels(labels)).Inc()
+		gauge.With(prometheus.Labels(labels)).Dec()
 	} else {
-		m.mInvalidGauge.WithLabelValues(name).Inc()
+		m.mInvalidGauge.WithLabelValues(name).Dec()
 	}
 }
 
@@ -42,7 +42,7 @@ func (m *Metrics) GaugeAdd(name string, value float64, labels Labels) {
 }
 
 func (m *Metrics) GaugeSub(name string, value float64, labels Labels) {
-	defer m.recover(name, "gauge_add")
+	defer m.recover(name, "gauge_sub")
 	if gauge := m.getGauge(name); gauge != nil {
 		gauge.With(prometheus.Labels(labels)).Sub(value)
 	} else {
