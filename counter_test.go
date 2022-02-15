@@ -48,7 +48,7 @@ func TestCounterIncMismatchedLabels(t *testing.T) {
 	assert.NotPanics(t, assert.PanicTestFunc(func() {
 		// Uncaught:
 		// Panic value:	inconsistent label cardinality: expected 2 label values but got 1 in prometheus.Labels{"name":"test.metrics"}
-		m.CounterInc("test_counter_mismatch", Labels{"this": "one"})
+		m.CounterInc("test_counter_mismatch_inc", Labels{"this": "one"})
 	}))
 
 	assert.Equal(t, 1, testutil.CollectAndCount(m.mPanicRecovery))

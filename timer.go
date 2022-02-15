@@ -2,7 +2,7 @@ package apex
 
 import "github.com/prometheus/client_golang/prometheus"
 
-func (m *Metrics) Timer(name string, labels Labels) *prometheus.Timer {
+func (m *Metrics) NewTimer(name string, labels Labels) *prometheus.Timer {
 	if metric, can := m.metrics[name]; can {
 		switch metric := metric.(type) {
 		case *prometheus.HistogramVec:
@@ -18,6 +18,6 @@ func (m *Metrics) Timer(name string, labels Labels) *prometheus.Timer {
 	return prometheus.NewTimer(m.mInvalidTimer.WithLabelValues(name))
 }
 
-func (m *Metrics) TimerFunc(name string, fn func(float64)) *prometheus.Timer {
+func (m *Metrics) NewTimerFunc(name string, fn func(float64)) *prometheus.Timer {
 	return prometheus.NewTimer(prometheus.ObserverFunc(fn))
 }

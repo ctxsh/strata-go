@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -42,15 +41,11 @@ func New(opts MetricsOpts) *Metrics {
 	return m
 }
 
-func (m *Metrics) Start(wg sync.WaitGroup) {
+func (m *Metrics) Start() error {
 	mux := http.NewServeMux()
 	mux.Handle(m.opts.Path, promhttp.Handler())
-
-	wg.Add(1)
-	go func() {
-		addr := fmt.Sprintf("localhost:%d", m.opts.Port)
-		_ = http.ListenAndServe(addr, mux)
-	}()
+	addr := fmt.Sprintf("localhost:%d", m.opts.Port)
+	return http.ListenAndServe(addr, mux)
 }
 
 func (m *Metrics) nameBuilder(name string) (string, error) {

@@ -26,7 +26,8 @@ func main() {
     []string{"what"},
     []float64{0.5, 0.9, 0.99}
   )
-  
+  m.Start()
+
   run()
 }
 
