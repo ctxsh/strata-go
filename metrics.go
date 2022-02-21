@@ -107,9 +107,9 @@ func (m *Metrics) init() {
 		Name:      name,
 	}, []string{"name"})
 
-	m.register(m.mErrorInvalid)
-	m.register(m.mPanicRecovery)
-	m.register(m.mInvalidCounter)
-	m.register(m.mInvalidGauge)
-	m.register(m.mInvalidTimer)
+	_ = m.register(m.mErrorInvalid)
+	_ = m.register(m.mPanicRecovery)
+	_ = m.register(m.mInvalidCounter)
+	_ = m.register(m.mInvalidGauge)
+	_ = m.register(m.mInvalidTimer)
 }
