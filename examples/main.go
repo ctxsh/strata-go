@@ -33,7 +33,6 @@ func main() {
 	metrics := apex.New(apex.MetricsOpts{
 		Namespace:    "apex",
 		Subsystem:    "example",
-		MustRegister: true,
 		Separator:    ':',
 		PanicOnError: true,
 	})

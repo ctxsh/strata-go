@@ -16,25 +16,37 @@ func TestGauge(t *testing.T) {
 	labels := prometheus.Labels{"this": "one"}
 
 	m := NewGauges("", "", ':')
+	metric, _ := m.Get(name, labels)
 
-	m.Set(name, 100, labels)
+	err := m.Set(name, 100, labels)
 	expected := utils.BuildProm(name, help, "gauge", labels, 100)
-	assert.NoError(t, testutil.CollectAndCompare(m.Get(name, labels), strings.NewReader(expected)), "name")
-	m.Inc(name, labels)
+	assert.NoError(t, err)
+	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
+
+	err = m.Inc(name, labels)
 	expected = utils.BuildProm(name, help, "gauge", labels, 101)
-	assert.NoError(t, testutil.CollectAndCompare(m.Get(name, labels), strings.NewReader(expected)), "name")
-	m.Inc(name, labels)
+	assert.NoError(t, err)
+	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
+
+	err = m.Inc(name, labels)
 	expected = utils.BuildProm(name, help, "gauge", labels, 102)
-	assert.NoError(t, testutil.CollectAndCompare(m.Get(name, labels), strings.NewReader(expected)), "name")
-	m.Dec(name, labels)
+	assert.NoError(t, err)
+	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
+
+	err = m.Dec(name, labels)
 	expected = utils.BuildProm(name, help, "gauge", labels, 101)
-	assert.NoError(t, testutil.CollectAndCompare(m.Get(name, labels), strings.NewReader(expected)), "name")
-	m.Add(name, 9, labels)
+	assert.NoError(t, err)
+	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
+
+	err = m.Add(name, 9, labels)
 	expected = utils.BuildProm(name, help, "gauge", labels, 110)
-	assert.NoError(t, testutil.CollectAndCompare(m.Get(name, labels), strings.NewReader(expected)), "name")
-	m.Sub(name, 109, labels)
+	assert.NoError(t, err)
+	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
+
+	err = m.Sub(name, 109, labels)
 	expected = utils.BuildProm(name, help, "gauge", labels, 1)
-	assert.NoError(t, testutil.CollectAndCompare(m.Get(name, labels), strings.NewReader(expected)), "name")
+	assert.NoError(t, err)
+	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
 }
 
 // func TestGaugeSetMismatchedLabels(t *testing.T) {

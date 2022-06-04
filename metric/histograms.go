@@ -21,18 +21,18 @@ func NewHistograms(ns string, sub string, sep rune) *Histograms {
 	}
 }
 
-func (h *Histograms) Get(name string, labels prometheus.Labels, buckets ...float64) *prometheus.HistogramVec {
+func (h *Histograms) Get(name string, labels prometheus.Labels, buckets ...float64) (*prometheus.HistogramVec, error) {
 	if metric, can := h.metrics[name]; can {
-		return metric
+		return metric, nil
 	}
 
 	return h.Register(name, utils.LabelKeys(labels), buckets...)
 }
 
-func (h *Histograms) Register(name string, labels []string, buckets ...float64) *prometheus.HistogramVec {
+func (h *Histograms) Register(name string, labels []string, buckets ...float64) (*prometheus.HistogramVec, error) {
 	n, err := utils.NameBuilder(h.namespace, h.subsystem, name, h.separator)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if buckets == nil {
@@ -46,27 +46,27 @@ func (h *Histograms) Register(name string, labels []string, buckets ...float64) 
 	}, labels)
 
 	if err := utils.Register(histogram); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	h.metrics[name] = histogram
-	return histogram
+	return histogram, nil
 }
 
-func (h *Histograms) Observe(name string, value float64, labels prometheus.Labels, buckets ...float64) {
-	if histogram := h.Get(name, labels, buckets...); histogram != nil {
-		histogram.With(prometheus.Labels(labels)).Observe(value)
-	} else {
-		panic("unanticipated error occured")
+func (h *Histograms) Observe(name string, value float64, labels prometheus.Labels, buckets ...float64) error {
+	histogram, err := h.Get(name, labels, buckets...)
+	if err != nil {
+		return err
 	}
+	histogram.With(prometheus.Labels(labels)).Observe(value)
+	return nil
 }
 
-func (h *Histograms) Timer(name string, labels prometheus.Labels, buckets ...float64) *prometheus.Timer {
-	if histogram := h.Get(name, labels, buckets...); histogram != nil {
-		return prometheus.NewTimer(histogram.With(
-			prometheus.Labels(labels),
-		))
-	} else {
-		panic("unanticipated error occured")
+func (h *Histograms) Timer(name string, labels prometheus.Labels, buckets ...float64) (*Timer, error) {
+	histogram, err := h.Get(name, labels, buckets...)
+	if err != nil {
+		return nil, err
 	}
+
+	return NewTimer(histogram, labels), nil
 }

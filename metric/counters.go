@@ -21,18 +21,18 @@ func NewCounters(ns string, sub string, sep rune) *Counters {
 	}
 }
 
-func (c *Counters) Get(name string, labels prometheus.Labels) *prometheus.CounterVec {
+func (c *Counters) Get(name string, labels prometheus.Labels) (*prometheus.CounterVec, error) {
 	if metric, can := c.metrics[name]; can {
-		return metric
+		return metric, nil
 	}
 
 	return c.Register(name, utils.LabelKeys(labels))
 }
 
-func (c *Counters) Register(name string, labels []string) *prometheus.CounterVec {
+func (c *Counters) Register(name string, labels []string) (*prometheus.CounterVec, error) {
 	n, err := utils.NameBuilder(c.namespace, c.subsystem, name, c.separator)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	counter := prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -41,25 +41,29 @@ func (c *Counters) Register(name string, labels []string) *prometheus.CounterVec
 	}, labels)
 
 	if err := utils.Register(counter); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	c.metrics[name] = counter
-	return counter
+	return counter, nil
 }
 
-func (c *Counters) Inc(name string, labels prometheus.Labels) {
-	if counter := c.Get(name, labels); counter != nil {
-		counter.With(prometheus.Labels(labels)).Inc()
-	} else {
-		panic("unanticipated error occured")
+func (c *Counters) Inc(name string, labels prometheus.Labels) error {
+	counter, err := c.Get(name, labels)
+	if err != nil {
+		return err
 	}
+
+	counter.With(prometheus.Labels(labels)).Inc()
+	return nil
 }
 
-func (c *Counters) Add(name string, value float64, labels prometheus.Labels) {
-	if counter := c.Get(name, labels); counter != nil {
-		counter.With(prometheus.Labels(labels)).Add(value)
-	} else {
-		panic("unanticipated error occured")
+func (c *Counters) Add(name string, value float64, labels prometheus.Labels) error {
+	counter, err := c.Get(name, labels)
+	if err != nil {
+		return err
 	}
+
+	counter.With(prometheus.Labels(labels)).Add(value)
+	return nil
 }
