@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/ctxswitch/apex/errors"
@@ -40,6 +41,7 @@ func TestLabelKeys(t *testing.T) {
 		"one": "1",
 		"two": "2",
 	})
+	sort.Strings(retval)
 	expected := []string{"one", "two"}
 	assert.Equal(t, expected, retval)
 }
