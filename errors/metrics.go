@@ -93,8 +93,6 @@ func (a *ApexInternalErrorMetrics) AlreadyRegistered(name string, t string) {
 func register(metric prometheus.Collector) error {
 	if err := prometheus.Register(metric); err != nil {
 		if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
-			return err
-		} else {
 			panic(err)
 		}
 	}
