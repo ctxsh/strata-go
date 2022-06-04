@@ -5,13 +5,18 @@
 MAKEFLAGS += --silent
 
 test:
-	go test -race -cover ./...
+	go test -race -cover -tags test ./...
+
+cover:
+	go test -covermode=count -coverprofile cover.out ./...
+	go tool cover -html=cover.out -o cover.html
+	open cover.html
 
 clean:
 	rm bin/$(PROJECT)
 	go clean
 
-build:
+examples:
 	go build $(LDFLAGS) -o bin/$(PROJECT) ./examples/main.go
 
 run:

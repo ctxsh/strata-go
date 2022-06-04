@@ -3,13 +3,11 @@ package apex
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
+	"github.com/ctxswitch/apex/metric"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
-
-type Labels prometheus.Labels
 
 type MetricsOpts struct {
 	Namespace    string
@@ -18,23 +16,24 @@ type MetricsOpts struct {
 	Path         string
 	Port         int
 	Separator    rune
+	PanicOnError bool
 }
 
 type Metrics struct {
-	metrics map[string]prometheus.Collector
-	opts    MetricsOpts
+	opts MetricsOpts
 
-	mErrorInvalid  *prometheus.CounterVec
-	mPanicRecovery *prometheus.CounterVec
-	// New style of handling (try not to panic)
-	mInvalidCounter *prometheus.CounterVec
-	mInvalidGauge   *prometheus.GaugeVec
-	mInvalidTimer   *prometheus.HistogramVec
+	counters   *metric.Counters
+	gauges     *metric.Gauges
+	histograms *metric.Histograms
+	summaries  *metric.Summaries
 }
 
 func New(opts MetricsOpts) *Metrics {
 	m := &Metrics{
-		metrics: make(map[string]prometheus.Collector),
+		counters:   metric.NewCounters(opts.Namespace, opts.Subsystem, opts.Separator),
+		gauges:     metric.NewGauges(opts.Namespace, opts.Subsystem, opts.Separator),
+		histograms: metric.NewHistograms(opts.Namespace, opts.Subsystem, opts.Separator),
+		summaries:  metric.NewSummaries(opts.Namespace, opts.Subsystem, opts.Separator),
 	}
 	m.opts = defaults(opts)
 	m.init()
@@ -48,68 +47,110 @@ func (m *Metrics) Start() error {
 	return http.ListenAndServe(addr, mux)
 }
 
-func (m *Metrics) nameBuilder(name string) (string, error) {
-	var builder strings.Builder
+func (m *Metrics) CounterInc(name string, labels Labels) {
+	defer m.recover(name, "CounterInc")
 
-	if m.opts.Namespace != "" {
-		builder.WriteString(m.opts.Namespace)
-		builder.WriteRune(m.opts.Separator)
-	}
-
-	if m.opts.Subsystem != "" {
-		builder.WriteString(m.opts.Subsystem)
-		builder.WriteRune(m.opts.Separator)
-	}
-
-	if name == "" {
-		return "", InvalidMetricName
-	}
-	builder.WriteString(name)
-	return builder.String(), nil
+	m.counters.Inc(name, prometheus.Labels(labels))
 }
 
-func (m *Metrics) recover(name string, method string) {
-	if r := recover(); r != nil {
-		m.mPanicRecovery.With(prometheus.Labels{
-			"name":   name,
-			"method": method,
-		}).Inc()
+func (m *Metrics) CounterAdd(name string, value float64, labels Labels) {
+	defer m.recover(name, "CounterAdd")
+
+	m.counters.Add(name, value, prometheus.Labels(labels))
+}
+
+func (m *Metrics) GaugeSet(name string, value float64, labels Labels) {
+	defer m.recover(name, "GaugeSet")
+
+	m.gauges.Set(name, value, prometheus.Labels(labels))
+}
+
+func (m *Metrics) GaugeInc(name string, labels Labels) {
+	defer m.recover(name, "GaugeInc")
+
+	m.gauges.Inc(name, prometheus.Labels(labels))
+}
+
+func (m *Metrics) GaugeDec(name string, labels Labels) {
+	defer m.recover(name, "GaugeDec")
+
+	m.gauges.Dec(name, prometheus.Labels(labels))
+}
+
+func (m *Metrics) GaugeAdd(name string, value float64, labels Labels) {
+	defer m.recover(name, "GaugeAdd")
+
+	m.gauges.Add(name, value, prometheus.Labels(labels))
+}
+
+func (m *Metrics) GaugeSub(name string, value float64, labels Labels) {
+	defer m.recover(name, "GaugeSub")
+
+	m.gauges.Sub(name, value, prometheus.Labels(labels))
+}
+
+func (m *Metrics) HistogramObserve(name string, value float64, labels Labels, buckets ...float64) {
+	defer m.recover(name, "HistogramObserve")
+
+	m.histograms.Observe(name, value, prometheus.Labels(labels), buckets...)
+}
+
+func (m *Metrics) HistogramTimer(name string, labels Labels, buckets ...float64) *prometheus.Timer {
+	defer m.recover(name, "HistogramTimers")
+
+	return m.histograms.Timer(name, prometheus.Labels(labels), buckets...)
+}
+
+func (m *Metrics) SummaryObserve(name string, value float64, labels Labels) {
+	defer m.recover(name, "SummaryObserve")
+
+	m.summaries.Observe(name, value, prometheus.Labels(labels))
+}
+
+func (m *Metrics) SummaryTimer(name string, labels Labels) *prometheus.Timer {
+	defer m.recover(name, "SummaryTimers")
+
+	return m.summaries.Timer(name, prometheus.Labels(labels))
+}
+
+func defaults(opts MetricsOpts) MetricsOpts {
+	// opts.Namespace default is empty
+	// opts.Subsystem default is empty
+	// opts.MustRegister default is false
+	// opts.PanicOnError default is false
+	if opts.Path == "" {
+		opts.Path = "/metrics"
 	}
+
+	if opts.Port == 0 {
+		opts.Port = 9000
+	}
+
+	if opts.Separator == 0 {
+		opts.Separator = '_'
+	}
+
+	return opts
 }
 
 func (m *Metrics) init() {
-	var name string
+	// Register and allow the internal metrics to panic regardless of the
+	// settings.  Not sure that I like this as it is dependent on the same
+	// code that it wraps.  Will look at something else.
+	m.counters.Register("apex_panic_recovery", []string{"name", "method"})
+	// m.counters.Register("apex_invalid_counter", []string{"name"})
+	// m.counters.Register("apex_invalid_gauge", []string{"name"})
+	// m.counters.Register("apex_invalid_histogram", []string{"name"})
+	// m.counters.Register("apex_invalid_summary", []string{"name"})
+	// m.counters.Register("apex_invalid_timer", []string{"name"})
+}
 
-	name, _ = m.nameBuilder("panic_recovery")
-	m.mPanicRecovery = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: name,
-	}, []string{"name", "method"})
+func (m *Metrics) recover(name string, method string) {
+	if !m.opts.PanicOnError {
+		return
+	}
 
-	name, _ = m.nameBuilder("panic_recovery")
-	m.mErrorInvalid = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: name,
-	}, []string{"name", "method"})
-
-	name, _ = m.nameBuilder("invalid_counter")
-	m.mInvalidCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: name,
-	}, []string{"name"})
-
-	name, _ = m.nameBuilder("invalid_gauge")
-	m.mInvalidGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: name,
-	}, []string{"name"})
-
-	name, _ = m.nameBuilder("invalid_timer")
-	m.mInvalidTimer = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: m.opts.Namespace,
-		Subsystem: m.opts.Subsystem,
-		Name:      name,
-	}, []string{"name"})
-
-	_ = m.register(m.mErrorInvalid)
-	_ = m.register(m.mPanicRecovery)
-	_ = m.register(m.mInvalidCounter)
-	_ = m.register(m.mInvalidGauge)
-	_ = m.register(m.mInvalidTimer)
+	if r := recover(); r != nil {
+		m.counters.Inc("apex_panic_recovery", prometheus.Labels{"name": name, "method": method})
+	}
 }
