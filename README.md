@@ -1,42 +1,83 @@
-# Apex Metrics Package
+# Apex Metrics
 
-Wrappers around the prometheus client.
+The Apex Go package provides a wrapper around the prometheus client to automatically register and collect metrics.
 
-TODO: More documentation.
+## Usage
 
-```go
-import "github.com/ctxswitch/go-apex"
+### Initialize
 
-var metrics apex.Metrics
+Initialize the metrics collectors using the `apex.New` function.  There are several options available.  As an example:
+```golang
+metrics := apex.New(apex.MetricsOpts{
+  Namespace:    "apex",
+  Subsystem:    "example",
+  Separator:    ':',
+  PanicOnError: false,
+})
+```
 
-func init() {
-  metrics = apex.New(apex.MetricsOpts{
-    Namespace:    "apex",
-    Subsystem:    "example",
-    MustRegister: true,
-    Separator:    ':',
-  })
+| Option | Default | Description |
+|--------|---------|-------------|
+| Namespace | empty | The prefix for a metric |
+| Subsystem | empty | A string that represents the subsystem.  This value is joined to the namespace with the defined seperator |
+| Separator | `_` | The seperator that will be used to join the metric name components. |
+| Path | `/metrics` | The path used by the HTTP server |
+| Port | `9000` | The port used by the HTTP server |
+| PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `apex:errors:panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |  
+
+### Example
+```golang
+package main
+
+import (
+	"math/rand"
+	"sync"
+	"time"
+
+	"github.com/ctxswitch/apex"
+)
+
+func random(min int, max int) float64 {
+	return float64(min) + rand.Float64()*(float64(max-min))
+}
+
+func runOnce(m *apex.Metrics) {
+	timer := m.HistogramTimer("latency", apex.Labels{
+		"func":   "runOnce",
+		"region": "us-east-1",
+	}, 0.5, 0.9, 0.99, 0.999, 1.0)
+	defer timer.ObserveDuration()
+
+	m.CounterInc("inc_counter", apex.Labels{"region": "us-east-1"})
+	m.CounterAdd("add_counter", 5.0, apex.Labels{"region": "us-east-1"})
+	m.GaugeInc("test_gauge", apex.Labels{"region": "us-east-1"})
+	m.GaugeSet("test_gauge", random(1, 100), apex.Labels{"region": "us-east-1"})
+	delay := time.Duration(random(500, 1500)) * time.Millisecond
+	time.Sleep(delay)
 }
 
 func main() {
-  metrics.NewCounter("my_counter_metric", []string{"env"})
-  metrics.NewGauge("my_gauge_metric", []string{"region"})
-  metrics.NewHistogram(
-    "my_latency_metric",
-    []string{"what"},
-    []float64{0.5, 0.9, 0.99}
-  )
-  m.Start()
+	var wg sync.WaitGroup
 
-  run()
-}
+	metrics := apex.New(apex.MetricsOpts{
+		Namespace:    "apex",
+		Subsystem:    "example",
+		MustRegister: true,
+		Separator:    ':',
+		PanicOnError: false,
+	})
 
-func run() {
-  timer := metrics.NewTimer("my_latency_metric", apex.Labels{"what": "something"})
-  defer timer.ObserveDuration()
+	wg.Add(1)
+	go func() {
+		_ = metrics.Start()
+	}()
 
-  // Do stuff
-  metrics.CounterInc("my_counter_metric", apex.Labels{"env": "production"})
-  metrics.GaugeSet("my_gauge_metric", 100, apex.Labels{"region": "us-east-1"})
+	wg.Add(1)
+	go func() {
+		for {
+			runOnce(metrics)
+		}
+	}()
+	wg.Wait()
 }
 ```

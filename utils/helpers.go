@@ -1,12 +1,11 @@
-package apex
+package utils
 
 import (
 	"strconv"
 	"strings"
-	"testing"
 )
 
-func buildProm(t *testing.T, name string, help string, ctype string, labels map[string]string, value float64) string {
+func BuildProm(name string, help string, ctype string, labels map[string]string, value float64) string {
 	var builder strings.Builder
 	builder.WriteString("# HELP ")
 	builder.WriteString(name + " ")

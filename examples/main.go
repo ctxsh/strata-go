@@ -13,14 +13,16 @@ func random(min int, max int) float64 {
 }
 
 func runOnce(m *apex.Metrics) {
-	timer := m.NewTimer("test_histogram", apex.Labels{"what": "something"})
+	timer := m.HistogramTimer("latency", apex.Labels{
+		"func":   "runOnce",
+		"region": "us-east-1",
+	}, 0.5, 0.9, 0.99, 0.999, 1.0)
 	defer timer.ObserveDuration()
 
 	m.CounterInc("inc_counter", apex.Labels{"region": "us-east-1"})
 	m.CounterAdd("add_counter", 5.0, apex.Labels{"region": "us-east-1"})
 	m.GaugeInc("test_gauge", apex.Labels{"region": "us-east-1"})
 	m.GaugeSet("test_gauge", random(1, 100), apex.Labels{"region": "us-east-1"})
-
 	delay := time.Duration(random(500, 1500)) * time.Millisecond
 	time.Sleep(delay)
 }
@@ -31,18 +33,9 @@ func main() {
 	metrics := apex.New(apex.MetricsOpts{
 		Namespace:    "apex",
 		Subsystem:    "example",
-		MustRegister: true,
 		Separator:    ':',
+		PanicOnError: true,
 	})
-
-	metrics.NewCounter("inc_counter", []string{"region"})
-	metrics.NewCounter("add_counter", []string{"region"})
-	metrics.NewGauge("test_gauge", []string{"region"})
-	metrics.NewHistogram(
-		"test_histogram",
-		[]string{"what"},
-		[]float64{0.5, 0.9, 0.99},
-	)
 
 	wg.Add(1)
 	go func() {
