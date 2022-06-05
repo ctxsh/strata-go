@@ -1,4 +1,4 @@
-module github.com/ctxswitch/apex
+module github.com/ctxswitch/apex-go
 
 go 1.18
 
