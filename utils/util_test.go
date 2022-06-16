@@ -4,7 +4,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/ctxswitch/apex-go/errors"
+	"ctx.sh/apex/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )

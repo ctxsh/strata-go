@@ -34,7 +34,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ctxswitch/apex"
+	"ctx.sh/apex"
 )
 
 func random(min int, max int) float64 {

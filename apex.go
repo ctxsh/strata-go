@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ctxswitch/apex-go/errors"
-	"github.com/ctxswitch/apex-go/metric"
+	"ctx.sh/apex/errors"
+	"ctx.sh/apex/metric"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
