@@ -3,7 +3,7 @@ package utils
 import (
 	"strings"
 
-	"github.com/ctxswitch/apex/errors"
+	"ctx.sh/apex/errors"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

@@ -1,7 +1,7 @@
 package metric
 
 import (
-	"github.com/ctxswitch/apex/utils"
+	"ctx.sh/apex/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

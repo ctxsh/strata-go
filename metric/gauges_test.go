@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ctxswitch/apex/utils"
+	"ctx.sh/apex/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
