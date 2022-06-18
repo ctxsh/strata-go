@@ -18,6 +18,7 @@ metrics := apex.New(apex.MetricsOpts{
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| BindAddr | `0.0.0.0` | The address the promethus collector will listen on for connections |
 | Namespace | empty | The prefix for a metric |
 | Subsystem | empty | A string that represents the subsystem.  This value is joined to the namespace with the defined seperator |
 | Separator | `_` | The seperator that will be used to join the metric name components. |

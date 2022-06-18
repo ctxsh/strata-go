@@ -11,6 +11,7 @@ import (
 )
 
 type MetricsOpts struct {
+	BindAddr     string
 	Namespace    string
 	Subsystem    string
 	Path         string
@@ -44,7 +45,7 @@ func New(opts MetricsOpts) *Metrics {
 func (m *Metrics) Start() error {
 	mux := http.NewServeMux()
 	mux.Handle(m.opts.Path, promhttp.Handler())
-	addr := fmt.Sprintf("localhost:%d", m.opts.Port)
+	addr := fmt.Sprintf("%s:%d", m.opts.BindAddr, m.opts.Port)
 	return http.ListenAndServe(addr, mux)
 }
 
@@ -145,6 +146,10 @@ func defaults(opts MetricsOpts) MetricsOpts {
 	// opts.Subsystem default is empty
 	// opts.MustRegister default is false
 	// opts.PanicOnError default is false
+	if opts.BindAddr == "" {
+		opts.BindAddr = "0.0.0.0"
+	}
+
 	if opts.Path == "" {
 		opts.Path = "/metrics"
 	}
