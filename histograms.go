@@ -1,9 +1,13 @@
-package metric
+package apex
 
 import (
 	"ctx.sh/apex/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
+
+type HistogramOpts struct {
+	Buckets []float64
+}
 
 type Histograms struct {
 	metrics   map[string]*prometheus.HistogramVec
@@ -21,28 +25,28 @@ func NewHistograms(ns string, sub string, sep rune) *Histograms {
 	}
 }
 
-func (h *Histograms) Get(name string, labels prometheus.Labels, buckets ...float64) (*prometheus.HistogramVec, error) {
+func (h *Histograms) Get(name string, labels prometheus.Labels, opts HistogramOpts) (*prometheus.HistogramVec, error) {
 	if metric, can := h.metrics[name]; can {
 		return metric, nil
 	}
 
-	return h.Register(name, utils.LabelKeys(labels), buckets...)
+	return h.Register(name, utils.LabelKeys(labels), opts)
 }
 
-func (h *Histograms) Register(name string, labels []string, buckets ...float64) (*prometheus.HistogramVec, error) {
+func (h *Histograms) Register(name string, labels []string, opts HistogramOpts) (*prometheus.HistogramVec, error) {
 	n, err := utils.NameBuilder(h.namespace, h.subsystem, name, h.separator)
 	if err != nil {
 		return nil, err
 	}
 
-	if buckets == nil {
-		buckets = prometheus.DefBuckets
+	if opts.Buckets == nil {
+		opts.Buckets = prometheus.DefBuckets
 	}
 
 	histogram := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    n,
 		Help:    "created automagically by apex",
-		Buckets: buckets,
+		Buckets: opts.Buckets,
 	}, labels)
 
 	if err := utils.Register(histogram); err != nil {
@@ -53,8 +57,8 @@ func (h *Histograms) Register(name string, labels []string, buckets ...float64) 
 	return histogram, nil
 }
 
-func (h *Histograms) Observe(name string, value float64, labels prometheus.Labels, buckets ...float64) error {
-	histogram, err := h.Get(name, labels, buckets...)
+func (h *Histograms) Observe(name string, value float64, labels prometheus.Labels, opts HistogramOpts) error {
+	histogram, err := h.Get(name, labels, opts)
 	if err != nil {
 		return err
 	}
@@ -62,8 +66,8 @@ func (h *Histograms) Observe(name string, value float64, labels prometheus.Label
 	return nil
 }
 
-func (h *Histograms) Timer(name string, labels prometheus.Labels, buckets ...float64) (*Timer, error) {
-	histogram, err := h.Get(name, labels, buckets...)
+func (h *Histograms) Timer(name string, labels prometheus.Labels, opts HistogramOpts) (*Timer, error) {
+	histogram, err := h.Get(name, labels, opts)
 	if err != nil {
 		return nil, err
 	}

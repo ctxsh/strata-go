@@ -1,4 +1,4 @@
-package metric
+package apex
 
 import (
 	"ctx.sh/apex/utils"

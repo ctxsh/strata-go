@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"ctx.sh/apex/errors"
-	"ctx.sh/apex/metric"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -23,19 +22,19 @@ type MetricsOpts struct {
 type Metrics struct {
 	opts MetricsOpts
 
-	counters   *metric.Counters
-	gauges     *metric.Gauges
-	histograms *metric.Histograms
-	summaries  *metric.Summaries
+	counters   *Counters
+	gauges     *Gauges
+	histograms *Histograms
+	summaries  *Summaries
 	errors     *errors.ApexInternalErrorMetrics
 }
 
 func New(opts MetricsOpts) *Metrics {
 	m := &Metrics{
-		counters:   metric.NewCounters(opts.Namespace, opts.Subsystem, opts.Separator),
-		gauges:     metric.NewGauges(opts.Namespace, opts.Subsystem, opts.Separator),
-		histograms: metric.NewHistograms(opts.Namespace, opts.Subsystem, opts.Separator),
-		summaries:  metric.NewSummaries(opts.Namespace, opts.Subsystem, opts.Separator),
+		counters:   NewCounters(opts.Namespace, opts.Subsystem, opts.Separator),
+		gauges:     NewGauges(opts.Namespace, opts.Subsystem, opts.Separator),
+		histograms: NewHistograms(opts.Namespace, opts.Subsystem, opts.Separator),
+		summaries:  NewSummaries(opts.Namespace, opts.Subsystem, opts.Separator),
 	}
 	m.opts = defaults(opts)
 	m.errors = errors.NewApexInternalErrorMetrics(opts.Namespace, opts.Subsystem, opts.Separator)
@@ -105,36 +104,36 @@ func (m *Metrics) GaugeSub(name string, value float64, labels Labels) {
 	}
 }
 
-func (m *Metrics) HistogramObserve(name string, value float64, labels Labels, buckets ...float64) {
+func (m *Metrics) HistogramObserve(name string, value float64, labels Labels, opts HistogramOpts) {
 	defer m.recover(name, "HistogramObserve")
 
-	if err := m.histograms.Observe(name, value, prometheus.Labels(labels), buckets...); err != nil {
+	if err := m.histograms.Observe(name, value, prometheus.Labels(labels), opts); err != nil {
 		m.emitError(err, name, "HistogramObserve")
 	}
 }
 
-func (m *Metrics) HistogramTimer(name string, labels Labels, buckets ...float64) *metric.Timer {
+func (m *Metrics) HistogramTimer(name string, labels Labels, opts HistogramOpts) *Timer {
 	defer m.recover(name, "HistogramTimers")
 
-	timer, err := m.histograms.Timer(name, prometheus.Labels(labels), buckets...)
+	timer, err := m.histograms.Timer(name, prometheus.Labels(labels), opts)
 	if err != nil {
 		m.emitError(err, name, "HistogramTimer")
 	}
 	return timer
 }
 
-func (m *Metrics) SummaryObserve(name string, value float64, labels Labels) {
+func (m *Metrics) SummaryObserve(name string, value float64, labels Labels, opts SummaryOpts) {
 	defer m.recover(name, "SummaryObserve")
 
-	if err := m.summaries.Observe(name, value, prometheus.Labels(labels)); err != nil {
+	if err := m.summaries.Observe(name, value, prometheus.Labels(labels), opts); err != nil {
 		m.emitError(err, name, "SummaryObserve")
 	}
 }
 
-func (m *Metrics) SummaryTimer(name string, labels Labels) *metric.Timer {
+func (m *Metrics) SummaryTimer(name string, labels Labels, opts SummaryOpts) *Timer {
 	defer m.recover(name, "SummaryTimers")
 
-	timer, err := m.summaries.Timer(name, prometheus.Labels(labels))
+	timer, err := m.summaries.Timer(name, prometheus.Labels(labels), opts)
 	if err != nil {
 		m.emitError(err, name, "counter_inc")
 	}
