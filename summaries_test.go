@@ -1,4 +1,4 @@
-package metric
+package apex
 
 // func TestSummarySetMismatchedLabels(t *testing.T) {
 // 	m := New(MetricsOpts{MustRegister: true})

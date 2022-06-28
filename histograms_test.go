@@ -1,4 +1,4 @@
-package metric
+package apex
 
 // func TestHistogramSetMismatchedLabels(t *testing.T) {
 // 	m := NewHistograms("", "", ':')

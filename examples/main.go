@@ -8,21 +8,43 @@ import (
 	"ctx.sh/apex"
 )
 
+var (
+	histogramOpts = apex.HistogramOpts{
+		Buckets: []float64{0.5, 0.9, 0.99, 0.999, 1.0},
+	}
+	summaryOpts = apex.SummaryOpts{
+		MaxAge:     5 * time.Minute,
+		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		AgeBuckets: 5,
+	}
+	labels = apex.Labels{"region": "us-east-1"}
+)
+
 func random(min int, max int) float64 {
 	return float64(min) + rand.Float64()*(float64(max-min))
 }
 
 func runOnce(m *apex.Metrics) {
+	// Histogram timer
 	timer := m.HistogramTimer("latency", apex.Labels{
 		"func":   "runOnce",
 		"region": "us-east-1",
-	}, 0.5, 0.9, 0.99, 0.999, 1.0)
+	}, histogramOpts)
 	defer timer.ObserveDuration()
 
-	m.CounterInc("inc_counter", apex.Labels{"region": "us-east-1"})
-	m.CounterAdd("add_counter", 5.0, apex.Labels{"region": "us-east-1"})
-	m.GaugeInc("test_gauge", apex.Labels{"region": "us-east-1"})
-	m.GaugeSet("test_gauge", random(1, 100), apex.Labels{"region": "us-east-1"})
+	// Counter functions
+	m.CounterInc("test_counter", labels)
+	m.CounterAdd("test_counter", 5.0, labels)
+
+	// Gauge functions
+	m.GaugeInc("test_gauge", labels)
+	m.GaugeSet("test_gauge", random(1, 100), labels)
+	m.GaugeAdd("test_gauge", 2.0, labels)
+	m.GaugeSub("test_gauge", 1.0, labels)
+
+	// Summary observer
+	m.SummaryObserve("test_summary", random(1, 10), labels, summaryOpts)
+
 	delay := time.Duration(random(500, 1500)) * time.Millisecond
 	time.Sleep(delay)
 }
