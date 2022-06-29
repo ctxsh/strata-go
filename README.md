@@ -36,7 +36,7 @@ A counter is a cumulative metric that represents a single monotonically increasi
 
 Increment a counter metric by one.
 
-```
+```go
 metrics.CounterInc("my_counter", apex.Labels{"app": "my_app"})
 ```
 
@@ -44,7 +44,7 @@ metrics.CounterInc("my_counter", apex.Labels{"app": "my_app"})
 
 Add a float64 value to the counter metric. 
 
-```
+```go
 metrics.CounterAdd("my_counter", 2.0, apex.Labels{"app": "my_app"})
 ```
 
@@ -56,7 +56,7 @@ A gauge is a metric that represents a single numerical value that can arbitraril
 
 Set a gauge to the value that is passed.
 
-```
+```go
 metrics.GaugeSet("my_gauge", 2.0, apex.Labels{"app": "my_app"})
 ```
 
@@ -64,7 +64,7 @@ metrics.GaugeSet("my_gauge", 2.0, apex.Labels{"app": "my_app"})
 
 Increment a gauge by one.
 
-```
+```go
 metrics.GaugeInc("my_gauge", apex.Labels{"app": "my_app"})
 ```
 
@@ -72,7 +72,7 @@ metrics.GaugeInc("my_gauge", apex.Labels{"app": "my_app"})
 
 Decrement a gauge by one.
 
-```
+```go
 metrics.GaugeDec("my_gauge", apex.Labels{"app": "my_app"})
 ```
 
@@ -80,7 +80,7 @@ metrics.GaugeDec("my_gauge", apex.Labels{"app": "my_app"})
 
 Adds the value that is passed to a gauge.
 
-```
+```go
 metrics.GaugeAdd("my_gauge", 2.0, apex.Labels{"app": "my_app"})
 ```
 
@@ -88,7 +88,7 @@ metrics.GaugeAdd("my_gauge", 2.0, apex.Labels{"app": "my_app"})
 
 Subtract the value that is passed to a gauge.
 
-```
+```go
 metrics.GaugeSub("my_gauge", 2.0, apex.Labels{"app": "my_app"})
 ```
 
@@ -102,8 +102,7 @@ A histogram samples observations and counts them in configurable buckets. Most o
 
 Add a single observation to the histogram.
 
-```
-
+```go
 metrics.HistogramObserve("my_histogram", response_time, apex.Labels{
 	"app": "my_app",
 }, apex.HistogramOpts{
@@ -115,7 +114,7 @@ metrics.HistogramObserve("my_histogram", response_time, apex.Labels{
 
 Create a histogram timer. 
 
-```
+```go
 timer := m.HistogramTimer("latency", apex.Labels{
 		"func":   "runOnce",
 		"region": "us-east-1",
@@ -135,7 +134,7 @@ A summary samples observations and calculates quantiles over a sliding time wind
 
 Add a single observations to the summary
 
-```
+```go
 metrics.SummaryObserve("test_summary", response, apex.Labels{
 	"site": "api.example.com",
 }, apex.SummaryOpts{
@@ -149,7 +148,7 @@ metrics.SummaryObserve("test_summary", response, apex.Labels{
 
 Create a summary timer. 
 
-```
+```go
 timer := m.SummaryTimer("latency", apex.Labels{
 		"func":   "runOnce",
 		"region": "us-east-1",
