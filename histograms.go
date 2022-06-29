@@ -29,7 +29,7 @@ func (h *Histograms) Get(name string, labels Labels, opts HistogramOpts) (*prome
 		return metric, nil
 	}
 
-	return h.Register(name, LabelKeys(labels), opts)
+	return h.Register(name, labels.Keys(), opts)
 }
 
 func (h *Histograms) Register(name string, labels []string, opts HistogramOpts) (*prometheus.HistogramVec, error) {

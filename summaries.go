@@ -39,7 +39,7 @@ func (s *Summaries) Get(name string, labels Labels, opts SummaryOpts) (*promethe
 		return metric, nil
 	}
 
-	return s.Register(name, LabelKeys(labels), opts)
+	return s.Register(name, labels.Keys(), opts)
 }
 
 func (s *Summaries) Register(name string, labels []string, opts SummaryOpts) (*prometheus.SummaryVec, error) {
