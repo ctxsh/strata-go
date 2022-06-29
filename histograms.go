@@ -1,7 +1,6 @@
 package apex
 
 import (
-	"ctx.sh/apex/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -25,16 +24,16 @@ func NewHistograms(ns string, sub string, sep rune) *Histograms {
 	}
 }
 
-func (h *Histograms) Get(name string, labels prometheus.Labels, opts HistogramOpts) (*prometheus.HistogramVec, error) {
+func (h *Histograms) Get(name string, labels Labels, opts HistogramOpts) (*prometheus.HistogramVec, error) {
 	if metric, can := h.metrics[name]; can {
 		return metric, nil
 	}
 
-	return h.Register(name, utils.LabelKeys(labels), opts)
+	return h.Register(name, LabelKeys(labels), opts)
 }
 
 func (h *Histograms) Register(name string, labels []string, opts HistogramOpts) (*prometheus.HistogramVec, error) {
-	n, err := utils.NameBuilder(h.namespace, h.subsystem, name, h.separator)
+	n, err := NameBuilder(h.namespace, h.subsystem, name, h.separator)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +48,7 @@ func (h *Histograms) Register(name string, labels []string, opts HistogramOpts) 
 		Buckets: opts.Buckets,
 	}, labels)
 
-	if err := utils.Register(histogram); err != nil {
+	if err := Register(histogram); err != nil {
 		return nil, err
 	}
 
@@ -57,7 +56,7 @@ func (h *Histograms) Register(name string, labels []string, opts HistogramOpts) 
 	return histogram, nil
 }
 
-func (h *Histograms) Observe(name string, value float64, labels prometheus.Labels, opts HistogramOpts) error {
+func (h *Histograms) Observe(name string, value float64, labels Labels, opts HistogramOpts) error {
 	histogram, err := h.Get(name, labels, opts)
 	if err != nil {
 		return err
@@ -66,7 +65,7 @@ func (h *Histograms) Observe(name string, value float64, labels prometheus.Label
 	return nil
 }
 
-func (h *Histograms) Timer(name string, labels prometheus.Labels, opts HistogramOpts) (*Timer, error) {
+func (h *Histograms) Timer(name string, labels Labels, opts HistogramOpts) (*Timer, error) {
 	histogram, err := h.Get(name, labels, opts)
 	if err != nil {
 		return nil, err

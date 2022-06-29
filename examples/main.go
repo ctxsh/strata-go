@@ -17,7 +17,8 @@ var (
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		AgeBuckets: 5,
 	}
-	labels = apex.Labels{"region": "us-east-1"}
+	labels      = apex.Labels{"region": "us-east-1"}
+	otherLabels = apex.Labels{"func": "runOnce", "region": "us-east-1"}
 )
 
 func random(min int, max int) float64 {
@@ -36,13 +37,16 @@ func runOnce(m *apex.Metrics) {
 	m.CounterInc("test_counter", labels)
 	m.CounterAdd("test_counter", 5.0, labels)
 
+	// If different labels are used, a new measurement is created
+	m.CounterInc("test_counter", otherLabels)
+
 	// Gauge functions
 	m.GaugeInc("test_gauge", labels)
 	m.GaugeSet("test_gauge", random(1, 100), labels)
 	m.GaugeAdd("test_gauge", 2.0, labels)
 	m.GaugeSub("test_gauge", 1.0, labels)
 
-	// Summary observer
+	// Summary observation
 	m.SummaryObserve("test_summary", random(1, 10), labels, summaryOpts)
 
 	delay := time.Duration(random(500, 1500)) * time.Millisecond

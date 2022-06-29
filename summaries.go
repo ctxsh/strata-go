@@ -3,7 +3,6 @@ package apex
 import (
 	"time"
 
-	"ctx.sh/apex/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -35,16 +34,16 @@ func NewSummaries(ns string, sub string, sep rune) *Summaries {
 	}
 }
 
-func (s *Summaries) Get(name string, labels prometheus.Labels, opts SummaryOpts) (*prometheus.SummaryVec, error) {
+func (s *Summaries) Get(name string, labels Labels, opts SummaryOpts) (*prometheus.SummaryVec, error) {
 	if metric, can := s.metrics[name]; can {
 		return metric, nil
 	}
 
-	return s.Register(name, utils.LabelKeys(labels), opts)
+	return s.Register(name, LabelKeys(labels), opts)
 }
 
 func (s *Summaries) Register(name string, labels []string, opts SummaryOpts) (*prometheus.SummaryVec, error) {
-	n, err := utils.NameBuilder(s.namespace, s.subsystem, name, s.separator)
+	n, err := NameBuilder(s.namespace, s.subsystem, name, s.separator)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +68,7 @@ func (s *Summaries) Register(name string, labels []string, opts SummaryOpts) (*p
 		AgeBuckets: opts.AgeBuckets,
 	}, labels)
 
-	if err := utils.Register(summary); err != nil {
+	if err := Register(summary); err != nil {
 		return nil, err
 	}
 
@@ -77,7 +76,7 @@ func (s *Summaries) Register(name string, labels []string, opts SummaryOpts) (*p
 	return summary, nil
 }
 
-func (s *Summaries) Observe(name string, value float64, labels prometheus.Labels, opts SummaryOpts) error {
+func (s *Summaries) Observe(name string, value float64, labels Labels, opts SummaryOpts) error {
 	summary, err := s.Get(name, labels, opts)
 	if err != nil {
 		return err
@@ -86,7 +85,7 @@ func (s *Summaries) Observe(name string, value float64, labels prometheus.Labels
 	return nil
 }
 
-func (s *Summaries) Timer(name string, labels prometheus.Labels, opts SummaryOpts) (*Timer, error) {
+func (s *Summaries) Timer(name string, labels Labels, opts SummaryOpts) (*Timer, error) {
 	summary, err := s.Get(name, labels, opts)
 	if err != nil {
 		return nil, err

@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"ctx.sh/apex/utils"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 )
@@ -13,38 +11,38 @@ import (
 func TestGauge(t *testing.T) {
 	name := "test_metric"
 	help := "created automagically by apex"
-	labels := prometheus.Labels{"this": "one"}
+	labels := Labels{"this": "one"}
 
 	m := NewGauges("", "", ':')
 	metric, _ := m.Get(name, labels)
 
 	err := m.Set(name, 100, labels)
-	expected := utils.BuildProm(name, help, "gauge", labels, 100)
+	expected := BuildProm(name, help, "gauge", labels, 100)
 	assert.NoError(t, err)
 	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
 
 	err = m.Inc(name, labels)
-	expected = utils.BuildProm(name, help, "gauge", labels, 101)
+	expected = BuildProm(name, help, "gauge", labels, 101)
 	assert.NoError(t, err)
 	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
 
 	err = m.Inc(name, labels)
-	expected = utils.BuildProm(name, help, "gauge", labels, 102)
+	expected = BuildProm(name, help, "gauge", labels, 102)
 	assert.NoError(t, err)
 	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
 
 	err = m.Dec(name, labels)
-	expected = utils.BuildProm(name, help, "gauge", labels, 101)
+	expected = BuildProm(name, help, "gauge", labels, 101)
 	assert.NoError(t, err)
 	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
 
 	err = m.Add(name, 9, labels)
-	expected = utils.BuildProm(name, help, "gauge", labels, 110)
+	expected = BuildProm(name, help, "gauge", labels, 110)
 	assert.NoError(t, err)
 	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
 
 	err = m.Sub(name, 109, labels)
-	expected = utils.BuildProm(name, help, "gauge", labels, 1)
+	expected = BuildProm(name, help, "gauge", labels, 1)
 	assert.NoError(t, err)
 	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
 }

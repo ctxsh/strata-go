@@ -1,11 +1,10 @@
-package utils
+package apex
 
 import (
 	"sort"
 	"testing"
 
 	"ctx.sh/apex/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +36,7 @@ func TestNameBuilder(t *testing.T) {
 }
 
 func TestLabelKeys(t *testing.T) {
-	retval := LabelKeys(prometheus.Labels{
+	retval := LabelKeys(Labels{
 		"one": "1",
 		"two": "2",
 	})

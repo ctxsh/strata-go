@@ -1,4 +1,4 @@
-package utils
+package apex
 
 import (
 	"strings"
@@ -27,7 +27,7 @@ func NameBuilder(ns string, sub string, name string, sep rune) (string, error) {
 	return builder.String(), nil
 }
 
-func LabelKeys(labels prometheus.Labels) []string {
+func LabelKeys(labels Labels) []string {
 	keys := make([]string, 0)
 	for k := range labels {
 		keys = append(keys, k)
