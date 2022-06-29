@@ -1,7 +1,6 @@
 package apex
 
 import (
-	"ctx.sh/apex/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -21,16 +20,16 @@ func NewCounters(ns string, sub string, sep rune) *Counters {
 	}
 }
 
-func (c *Counters) Get(name string, labels prometheus.Labels) (*prometheus.CounterVec, error) {
+func (c *Counters) Get(name string, labels Labels) (*prometheus.CounterVec, error) {
 	if metric, can := c.metrics[name]; can {
 		return metric, nil
 	}
 
-	return c.Register(name, utils.LabelKeys(labels))
+	return c.Register(name, LabelKeys(labels))
 }
 
 func (c *Counters) Register(name string, labels []string) (*prometheus.CounterVec, error) {
-	n, err := utils.NameBuilder(c.namespace, c.subsystem, name, c.separator)
+	n, err := NameBuilder(c.namespace, c.subsystem, name, c.separator)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +39,7 @@ func (c *Counters) Register(name string, labels []string) (*prometheus.CounterVe
 		Help: "created automagically by apex",
 	}, labels)
 
-	if err := utils.Register(counter); err != nil {
+	if err := Register(counter); err != nil {
 		return nil, err
 	}
 
@@ -48,7 +47,7 @@ func (c *Counters) Register(name string, labels []string) (*prometheus.CounterVe
 	return counter, nil
 }
 
-func (c *Counters) Inc(name string, labels prometheus.Labels) error {
+func (c *Counters) Inc(name string, labels Labels) error {
 	counter, err := c.Get(name, labels)
 	if err != nil {
 		return err
@@ -58,7 +57,7 @@ func (c *Counters) Inc(name string, labels prometheus.Labels) error {
 	return nil
 }
 
-func (c *Counters) Add(name string, value float64, labels prometheus.Labels) error {
+func (c *Counters) Add(name string, value float64, labels Labels) error {
 	counter, err := c.Get(name, labels)
 	if err != nil {
 		return err

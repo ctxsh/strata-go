@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"ctx.sh/apex/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -51,7 +50,7 @@ func (m *Metrics) Start() error {
 func (m *Metrics) CounterInc(name string, labels Labels) {
 	defer m.recover(name, "CounterInc")
 
-	if err := m.counters.Inc(name, prometheus.Labels(labels)); err != nil {
+	if err := m.counters.Inc(name, labels); err != nil {
 		m.emitError(err, name, "CounterInc")
 	}
 }
@@ -59,7 +58,7 @@ func (m *Metrics) CounterInc(name string, labels Labels) {
 func (m *Metrics) CounterAdd(name string, value float64, labels Labels) {
 	defer m.recover(name, "CounterAdd")
 
-	if err := m.counters.Add(name, value, prometheus.Labels(labels)); err != nil {
+	if err := m.counters.Add(name, value, labels); err != nil {
 		m.emitError(err, name, "CounterAdd")
 	}
 }
@@ -67,7 +66,7 @@ func (m *Metrics) CounterAdd(name string, value float64, labels Labels) {
 func (m *Metrics) GaugeSet(name string, value float64, labels Labels) {
 	defer m.recover(name, "GaugeSet")
 
-	if err := m.gauges.Set(name, value, prometheus.Labels(labels)); err != nil {
+	if err := m.gauges.Set(name, value, labels); err != nil {
 		m.emitError(err, name, "GaugeSet")
 	}
 }
@@ -75,7 +74,7 @@ func (m *Metrics) GaugeSet(name string, value float64, labels Labels) {
 func (m *Metrics) GaugeInc(name string, labels Labels) {
 	defer m.recover(name, "GaugeInc")
 
-	if err := m.gauges.Inc(name, prometheus.Labels(labels)); err != nil {
+	if err := m.gauges.Inc(name, labels); err != nil {
 		m.emitError(err, name, "GaugeInc")
 	}
 }
@@ -83,7 +82,7 @@ func (m *Metrics) GaugeInc(name string, labels Labels) {
 func (m *Metrics) GaugeDec(name string, labels Labels) {
 	defer m.recover(name, "GaugeDec")
 
-	if err := m.gauges.Dec(name, prometheus.Labels(labels)); err != nil {
+	if err := m.gauges.Dec(name, labels); err != nil {
 		m.emitError(err, name, "GaugeDec")
 	}
 }
@@ -91,7 +90,7 @@ func (m *Metrics) GaugeDec(name string, labels Labels) {
 func (m *Metrics) GaugeAdd(name string, value float64, labels Labels) {
 	defer m.recover(name, "GaugeAdd")
 
-	if err := m.gauges.Add(name, value, prometheus.Labels(labels)); err != nil {
+	if err := m.gauges.Add(name, value, labels); err != nil {
 		m.emitError(err, name, "GaugeAdd")
 	}
 }
@@ -99,7 +98,7 @@ func (m *Metrics) GaugeAdd(name string, value float64, labels Labels) {
 func (m *Metrics) GaugeSub(name string, value float64, labels Labels) {
 	defer m.recover(name, "GaugeSub")
 
-	if err := m.gauges.Sub(name, value, prometheus.Labels(labels)); err != nil {
+	if err := m.gauges.Sub(name, value, labels); err != nil {
 		m.emitError(err, name, "GaugeSub")
 	}
 }
@@ -107,7 +106,7 @@ func (m *Metrics) GaugeSub(name string, value float64, labels Labels) {
 func (m *Metrics) HistogramObserve(name string, value float64, labels Labels, opts HistogramOpts) {
 	defer m.recover(name, "HistogramObserve")
 
-	if err := m.histograms.Observe(name, value, prometheus.Labels(labels), opts); err != nil {
+	if err := m.histograms.Observe(name, value, labels, opts); err != nil {
 		m.emitError(err, name, "HistogramObserve")
 	}
 }
@@ -115,7 +114,7 @@ func (m *Metrics) HistogramObserve(name string, value float64, labels Labels, op
 func (m *Metrics) HistogramTimer(name string, labels Labels, opts HistogramOpts) *Timer {
 	defer m.recover(name, "HistogramTimers")
 
-	timer, err := m.histograms.Timer(name, prometheus.Labels(labels), opts)
+	timer, err := m.histograms.Timer(name, labels, opts)
 	if err != nil {
 		m.emitError(err, name, "HistogramTimer")
 	}
@@ -125,7 +124,7 @@ func (m *Metrics) HistogramTimer(name string, labels Labels, opts HistogramOpts)
 func (m *Metrics) SummaryObserve(name string, value float64, labels Labels, opts SummaryOpts) {
 	defer m.recover(name, "SummaryObserve")
 
-	if err := m.summaries.Observe(name, value, prometheus.Labels(labels), opts); err != nil {
+	if err := m.summaries.Observe(name, value, labels, opts); err != nil {
 		m.emitError(err, name, "SummaryObserve")
 	}
 }
@@ -133,7 +132,7 @@ func (m *Metrics) SummaryObserve(name string, value float64, labels Labels, opts
 func (m *Metrics) SummaryTimer(name string, labels Labels, opts SummaryOpts) *Timer {
 	defer m.recover(name, "SummaryTimers")
 
-	timer, err := m.summaries.Timer(name, prometheus.Labels(labels), opts)
+	timer, err := m.summaries.Timer(name, labels, opts)
 	if err != nil {
 		m.emitError(err, name, "counter_inc")
 	}
