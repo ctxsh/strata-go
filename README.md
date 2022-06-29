@@ -139,9 +139,9 @@ Add a single observations to the summary
 metrics.SummaryObserve("test_summary", response, apex.Labels{
 	"site": "api.example.com",
 }, apex.SummaryOpts{
-		MaxAge:     5 * time.Minute,
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-		AgeBuckets: 5,
+	MaxAge:     5 * time.Minute,
+	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+	AgeBuckets: 5,
 })
 ```
 
