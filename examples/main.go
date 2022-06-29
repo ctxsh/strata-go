@@ -10,15 +10,14 @@ import (
 
 var (
 	histogramOpts = apex.HistogramOpts{
-		Buckets: []float64{0.5, 0.9, 0.99, 0.999, 1.0},
+		Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
 	}
 	summaryOpts = apex.SummaryOpts{
 		MaxAge:     5 * time.Minute,
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		AgeBuckets: 5,
 	}
-	labels      = apex.Labels{"region": "us-east-1"}
-	otherLabels = apex.Labels{"func": "runOnce", "region": "us-east-1"}
+	labels = apex.Labels{"region": "us-east-1"}
 )
 
 func random(min int, max int) float64 {
@@ -30,15 +29,12 @@ func runOnce(m *apex.Metrics) {
 	timer := m.HistogramTimer("latency", apex.Labels{
 		"func":   "runOnce",
 		"region": "us-east-1",
-	}, histogramOpts)
+	}, apex.HistogramOpts{})
 	defer timer.ObserveDuration()
 
 	// Counter functions
 	m.CounterInc("test_counter", labels)
 	m.CounterAdd("test_counter", 5.0, labels)
-
-	// If different labels are used, a new measurement is created
-	m.CounterInc("test_counter", otherLabels)
 
 	// Gauge functions
 	m.GaugeInc("test_gauge", labels)
@@ -47,9 +43,9 @@ func runOnce(m *apex.Metrics) {
 	m.GaugeSub("test_gauge", 1.0, labels)
 
 	// Summary observation
-	m.SummaryObserve("test_summary", random(1, 10), labels, summaryOpts)
+	m.SummaryObserve("test_summary", random(0, 10), labels, summaryOpts)
 
-	delay := time.Duration(random(500, 1500)) * time.Millisecond
+	delay := time.Duration(random(10, 1500)) * time.Millisecond
 	time.Sleep(delay)
 }
 
@@ -59,7 +55,7 @@ func main() {
 	metrics := apex.New(apex.MetricsOpts{
 		Namespace:    "apex",
 		Subsystem:    "example",
-		Separator:    ':',
+		Separator:    '_',
 		PanicOnError: true,
 	})
 
