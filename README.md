@@ -24,7 +24,7 @@ metrics := apex.New(apex.MetricsOpts{
 | Separator | `_` | The seperator that will be used to join the metric name components. |
 | Path | `/metrics` | The path used by the HTTP server |
 | Port | `9000` | The port used by the HTTP server |
-| PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `apex:errors:panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |  
+| PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `apex_errors_panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |  
 
 ## Available Functions
 
