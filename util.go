@@ -27,14 +27,6 @@ func NameBuilder(ns string, sub string, name string, sep rune) (string, error) {
 	return builder.String(), nil
 }
 
-func LabelKeys(labels Labels) []string {
-	keys := make([]string, 0)
-	for k := range labels {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
 func Register(metric prometheus.Collector) error {
 	if err := prometheus.Register(metric); err != nil {
 		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {

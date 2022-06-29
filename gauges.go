@@ -25,7 +25,7 @@ func (g *Gauges) Get(name string, labels Labels) (*prometheus.GaugeVec, error) {
 		return metric, nil
 	}
 
-	return g.Register(name, LabelKeys(labels))
+	return g.Register(name, labels.Keys())
 }
 
 func (g *Gauges) Register(name string, labels []string) (*prometheus.GaugeVec, error) {

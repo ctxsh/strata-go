@@ -36,10 +36,10 @@ func TestNameBuilder(t *testing.T) {
 }
 
 func TestLabelKeys(t *testing.T) {
-	retval := LabelKeys(Labels{
+	retval := Labels{
 		"one": "1",
 		"two": "2",
-	})
+	}.Keys()
 	sort.Strings(retval)
 	expected := []string{"one", "two"}
 	assert.Equal(t, expected, retval)

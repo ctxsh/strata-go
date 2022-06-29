@@ -25,7 +25,7 @@ func (c *Counters) Get(name string, labels Labels) (*prometheus.CounterVec, erro
 		return metric, nil
 	}
 
-	return c.Register(name, LabelKeys(labels))
+	return c.Register(name, labels.Keys())
 }
 
 func (c *Counters) Register(name string, labels []string) (*prometheus.CounterVec, error) {
