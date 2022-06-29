@@ -10,10 +10,10 @@ import (
 
 var (
 	histogramOpts = apex.HistogramOpts{
-		Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+		Buckets: []float64{.01, .025, .05, .1, .25, .5, 1, 2.5},
 	}
 	summaryOpts = apex.SummaryOpts{
-		MaxAge:     5 * time.Minute,
+		MaxAge:     10 * time.Minute,
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		AgeBuckets: 5,
 	}
@@ -29,7 +29,7 @@ func runOnce(m *apex.Metrics) {
 	timer := m.HistogramTimer("latency", apex.Labels{
 		"func":   "runOnce",
 		"region": "us-east-1",
-	}, apex.HistogramOpts{})
+	}, histogramOpts)
 	defer timer.ObserveDuration()
 
 	// Counter functions
@@ -45,7 +45,7 @@ func runOnce(m *apex.Metrics) {
 	// Summary observation
 	m.SummaryObserve("test_summary", random(0, 10), labels, summaryOpts)
 
-	delay := time.Duration(random(10, 1500)) * time.Millisecond
+	delay := time.Duration(random(1, 1500)) * time.Millisecond
 	time.Sleep(delay)
 }
 
