@@ -34,7 +34,7 @@ metrics := apex.New(apex.MetricsOpts{
 
 ### Counter
 
-A counter is a cumulative metric that represents a single monotonically increasing counter whose value can only increase or be reset to zero on restart. For example, you can use a counter to represent the number of requests served, tasks completed, or errors. ([source](https://prometheus.io/docs/concepts/metric_types/#counter))
+A counter is a cumulative metric whose value can only increase or be reset to zero on restart. Counters are often used to represent the number of requests served, tasks completed, or errors.
 
 #### `CounterInc`
 
@@ -54,7 +54,7 @@ metrics.CounterAdd("my_counter", 2.0, apex.Labels{"app": "my_app"})
 
 ### Gauge
 
-A gauge is a metric that represents a single numerical value that can arbitrarily go up and down.  Gauges are typically used for measured values like temperatures or current memory usage, but also "counts" that can go up and down, like the number of concurrent requests. ([source](https://prometheus.io/docs/concepts/metric_types/#gauge))
+A gauge represents a numerical value that can be arbitrarily increased or decreased.  Gauges are typically used for measured values like temperatures or current memory usage, but also "counts" that can go up and down.  Gauges are often used to represent things like disk and memory usage and concurrent requests. 
 
 #### `GaugeSet`
 
