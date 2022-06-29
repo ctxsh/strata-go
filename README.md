@@ -2,6 +2,12 @@
 
 The Apex Go package provides a wrapper around the prometheus client to automatically register and collect metrics.
 
+## Install
+
+```
+go get ctx.sh/apex
+```
+
 ## Usage
 
 ### Initialize
