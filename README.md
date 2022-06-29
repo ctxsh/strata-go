@@ -26,8 +26,6 @@ metrics := apex.New(apex.MetricsOpts{
 | Port | `9000` | The port used by the HTTP server |
 | PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `apex_errors_panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |  
 
-## Available Functions
-
 ### Counter
 
 A counter is a cumulative metric that represents a single monotonically increasing counter whose value can only increase or be reset to zero on restart. For example, you can use a counter to represent the number of requests served, tasks completed, or errors. ([source](https://prometheus.io/docs/concepts/metric_types/#counter))
