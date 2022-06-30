@@ -119,8 +119,8 @@ metrics.HistogramObserve("my_histogram", response_time, apex.Labels{
 Create a histogram timer. 
 
 ```go
-timer := m.HistogramTimer("latency", apex.Labels{
-		"func":   "runOnce",
+timer := m.HistogramTimer("response", apex.Labels{
+		"path":   "/api/comments",
 		"region": "us-east-1",
 	}, apex.HistogramOpts{})
 defer timer.ObserveDuration()
@@ -153,8 +153,8 @@ metrics.SummaryObserve("test_summary", response, apex.Labels{
 Create a summary timer. 
 
 ```go
-timer := m.SummaryTimer("latency", apex.Labels{
-		"func":   "runOnce",
+timer := m.SummaryTimer("response", apex.Labels{
+		"path":   "/api/comments",
 		"region": "us-east-1",
 	}, apex.SummaryOpts{})
 defer timer.ObserveDuration()
