@@ -4,7 +4,6 @@ import (
 	"sort"
 	"testing"
 
-	"ctx.sh/apex/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +20,7 @@ func TestNameBuilder(t *testing.T) {
 		{"apex", "", "counter", '_', "apex_counter", nil},
 		{"", "test", "counter", '_', "test_counter", nil},
 		{"", "", "counter", '_', "counter", nil},
-		{"apex", "test", "", '_', "", errors.ErrInvalidMetricName},
+		{"apex", "test", "", '_', "", ErrInvalidMetricName},
 	}
 
 	for _, tt := range tests {
