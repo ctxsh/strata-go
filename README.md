@@ -1,4 +1,4 @@
-# Apex Prometheus Client [![unit tests](https://github.com/ctxswitch/apex-go/actions/workflows/test.yml/badge.svg)](https://github.com/ctxswitch/apex-go/actions/workflows/test.yml)
+# Apex - Prometheus Client [![unit tests](https://github.com/ctxswitch/apex-go/actions/workflows/test.yml/badge.svg)](https://github.com/ctxswitch/apex-go/actions/workflows/test.yml)
 
 The Apex Go package provides a wrapper around the prometheus client to automatically register and collect metrics.
 
