@@ -25,11 +25,11 @@ import (
 type Gauges struct {
 	metrics   map[string]*prometheus.GaugeVec
 	namespace string
-	subsystem string
+	subsystem interface{}
 	separator rune
 }
 
-func NewGauges(ns string, sub string, sep rune) *Gauges {
+func NewGauges(ns string, sub interface{}, sep rune) *Gauges {
 	return &Gauges{
 		metrics:   make(map[string]*prometheus.GaugeVec),
 		namespace: ns,

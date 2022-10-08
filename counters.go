@@ -25,11 +25,11 @@ import (
 type Counters struct {
 	metrics   map[string]*prometheus.CounterVec
 	namespace string
-	subsystem string
+	subsystem interface{}
 	separator rune
 }
 
-func NewCounters(ns string, sub string, sep rune) *Counters {
+func NewCounters(ns string, sub interface{}, sep rune) *Counters {
 	return &Counters{
 		metrics:   make(map[string]*prometheus.CounterVec),
 		namespace: ns,

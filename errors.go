@@ -43,7 +43,7 @@ type ApexInternalErrorMetrics struct {
 	errAlreadyRegistered  *prometheus.CounterVec
 }
 
-func NewApexInternalErrorMetrics(ns string, sub string, sep rune) *ApexInternalErrorMetrics {
+func NewApexInternalErrorMetrics(ns string, sub interface{}, sep rune) *ApexInternalErrorMetrics {
 	var builder strings.Builder
 
 	if ns != "" {
@@ -51,8 +51,9 @@ func NewApexInternalErrorMetrics(ns string, sub string, sep rune) *ApexInternalE
 		builder.WriteRune(sep)
 	}
 
-	if sub != "" {
-		builder.WriteString(sub)
+	ss := subSystemToString(sub, sep)
+	if ss != "" {
+		builder.WriteString(ss)
 		builder.WriteRune(sep)
 	}
 

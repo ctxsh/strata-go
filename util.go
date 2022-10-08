@@ -24,7 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func NameBuilder(ns string, sub string, name string, sep rune) (string, error) {
+func NameBuilder(ns string, sub interface{}, name string, sep rune) (string, error) {
 	var builder strings.Builder
 
 	if ns != "" {
@@ -32,8 +32,9 @@ func NameBuilder(ns string, sub string, name string, sep rune) (string, error) {
 		builder.WriteRune(sep)
 	}
 
-	if sub != "" {
-		builder.WriteString(sub)
+	ss := subSystemToString(sub, sep)
+	if ss != "" {
+		builder.WriteString(ss)
 		builder.WriteRune(sep)
 	}
 
@@ -53,4 +54,15 @@ func Register(metric prometheus.Collector) error {
 		}
 	}
 	return nil
+}
+
+func subSystemToString(sub interface{}, sep rune) string {
+	switch s := sub.(type) {
+	case string:
+		return s
+	case []string:
+		return strings.Join(s, string(sep))
+	}
+
+	panic("unsupported subsystem type")
 }
