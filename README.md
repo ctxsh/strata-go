@@ -22,7 +22,7 @@ metrics := apex.New(apex.MetricsOpts{
 })
 ```
 
-Subsystems represented as an array of strings are also support to give additional flexibility in defining other groupings beneath the subsystem.
+Subsystems can also be defined as an array of strings to give users the flexibility to add additional groupings within a more complex environment.
 
 ```golang
 metrics := apex.New(apex.MetricsOpts{
