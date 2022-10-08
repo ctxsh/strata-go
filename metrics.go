@@ -196,7 +196,9 @@ func (m *Metrics) emitError(err error, name string, fn string) {
 }
 
 func (m *Metrics) recover(name string, fn string) {
-	if r := recover(); r != nil && !m.opts.PanicOnError {
-		m.errors.PanicRecovery(name, fn)
+	if !m.opts.PanicOnError {
+		if r := recover(); r != nil {
+			m.errors.PanicRecovery(name, fn)
+		}
 	}
 }
