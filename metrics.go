@@ -28,7 +28,7 @@ import (
 type MetricsOpts struct {
 	BindAddr     string
 	Namespace    string
-	Subsystem    string
+	Subsystem    interface{}
 	Path         string
 	Port         int
 	Separator    rune

@@ -29,11 +29,11 @@ type HistogramOpts struct {
 type Histograms struct {
 	metrics   map[string]*prometheus.HistogramVec
 	namespace string
-	subsystem string
+	subsystem interface{}
 	separator rune
 }
 
-func NewHistograms(ns string, sub string, sep rune) *Histograms {
+func NewHistograms(ns string, sub interface{}, sep rune) *Histograms {
 	return &Histograms{
 		metrics:   make(map[string]*prometheus.HistogramVec),
 		namespace: ns,

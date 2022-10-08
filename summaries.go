@@ -39,11 +39,11 @@ type SummaryOpts struct {
 type Summaries struct {
 	metrics   map[string]*prometheus.SummaryVec
 	namespace string
-	subsystem string
+	subsystem interface{}
 	separator rune
 }
 
-func NewSummaries(ns string, sub string, sep rune) *Summaries {
+func NewSummaries(ns string, sub interface{}, sep rune) *Summaries {
 	return &Summaries{
 		metrics:   make(map[string]*prometheus.SummaryVec),
 		namespace: ns,

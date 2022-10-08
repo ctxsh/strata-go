@@ -43,3 +43,22 @@ func TestLabelKeys(t *testing.T) {
 	expected := []string{"one", "two"}
 	assert.Equal(t, expected, retval)
 }
+
+func TestSubsystemToString(t *testing.T) {
+	tests := []struct {
+		input    interface{}
+		expected string
+	}{
+		{"", ""},
+		{[]string{}, ""},
+		{[]string{""}, ""},
+		{"one", "one"},
+		{[]string{"one"}, "one"},
+		{[]string{"one_two"}, "one_two"},
+	}
+
+	for i, tt := range tests {
+		actual := subSystemToString(tt.input, '_')
+		assert.Equal(t, tt.expected, actual, "test[%d]: %v", i, tt.input)
+	}
+}

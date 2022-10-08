@@ -22,11 +22,22 @@ metrics := apex.New(apex.MetricsOpts{
 })
 ```
 
+Subsystems represented as an array of strings are also support to give additional flexibility in defining other groupings beneath the subsystem.
+
+```golang
+metrics := apex.New(apex.MetricsOpts{
+  Namespace:    "apex",
+  Subsystem:    []string{"example", "internal"},
+  Separator:    ':',
+  PanicOnError: false,
+})
+```
+
 | Option | Default | Description |
 |--------|---------|-------------|
 | BindAddr | `0.0.0.0` | The address the promethus collector will listen on for connections |
 | Namespace | empty | The prefix for a metric |
-| Subsystem | empty | A string that represents the subsystem.  This value is joined to the namespace with the defined seperator |
+| Subsystem | empty | A string or array of strings that represent the subsystem(s).  The value is joined to the namespace with the defined seperator.  If an array of strings is given, the strings are joined with the seperator. |
 | Separator | `_` | The seperator that will be used to join the metric name components. |
 | Path | `/metrics` | The path used by the HTTP server |
 | Port | `9000` | The port used by the HTTP server |
