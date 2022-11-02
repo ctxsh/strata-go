@@ -24,12 +24,12 @@ func TestMetricsCounter(t *testing.T) {
 	CollectAndCompare(t, vec, "apex_example_test_total", "counter", labels, 6.0)
 
 	m1 := m.WithPrefix("next")
-	m1.CounterInc(name, "us-east-1")
+	m1.CounterInc(name)
 	vec, err = getCounter(m1, prefixedName(m1.prefix, name, m1.separator))
 	assert.NoError(t, err)
-	CollectAndCompare(t, vec, "apex_example_next_test_total", "counter", labels, 1.0)
-	m1.CounterAdd(name, 5.0, "us-east-1")
-	CollectAndCompare(t, vec, "apex_example_next_test_total", "counter", labels, 6.0)
+	CollectAndCompare(t, vec, "apex_example_next_test_total", "counter", nil, 1.0)
+	m1.CounterAdd(name, 5.0)
+	CollectAndCompare(t, vec, "apex_example_next_test_total", "counter", nil, 6.0)
 }
 
 func TestMetricsGauge(t *testing.T) {
@@ -50,18 +50,18 @@ func TestMetricsGauge(t *testing.T) {
 	CollectAndCompare(t, vec, "apex_example_test_g", "gauge", labels, 0.0)
 
 	m1 := m.WithPrefix("next")
-	m1.GaugeInc(name, "us-east-1")
+	m1.GaugeInc(name)
 	vec, err = getGauge(m, prefixedName(m1.prefix, name, m1.separator))
 	assert.NoError(t, err)
-	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 1.0)
-	m1.GaugeAdd(name, 5.0, "us-east-1")
-	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 6.0)
-	m1.GaugeSet(name, 10.0, "us-east-1")
-	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 10.0)
-	m1.GaugeDec(name, "us-east-1")
-	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 9.0)
-	m1.GaugeSub(name, 9.0, "us-east-1")
-	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 0.0)
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", nil, 1.0)
+	m1.GaugeAdd(name, 5.0)
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", nil, 6.0)
+	m1.GaugeSet(name, 10.0)
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", nil, 10.0)
+	m1.GaugeDec(name)
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", nil, 9.0)
+	m1.GaugeSub(name, 9.0)
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", nil, 0.0)
 }
 
 func getCounter(metrics *Metrics, n string) (MetricVec, error) {

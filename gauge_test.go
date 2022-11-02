@@ -34,7 +34,7 @@ func TestGaugeWithLabels(t *testing.T) {
 	}
 
 	reg := prometheus.NewPedanticRegistry()
-	vec, err := NewGaugeVec(reg, "test_g", "gauge", "test_g", "label")
+	vec, err := NewGaugeVec(reg, "test_g", "label")
 	assert.NoError(t, err)
 
 	vec.Inc("one")
