@@ -15,7 +15,7 @@ go get ctx.sh/apex
 Initialize the metrics collectors using the `apex.New` function.  There are several options available.  As an example:
 ```golang
 metrics := apex.New(apex.MetricsOpts{
-	ConstantLabels: []string{"role", "server"}
+	ConstantLabels: []string{"role", "server"},
 	Separator:    ':',
 	PanicOnError: false,
 })
