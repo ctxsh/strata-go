@@ -236,19 +236,11 @@ m := apex.New(apex.MetricsOpts{
 })
 
 // Without labels
-metrics.SummaryObserve("test_summary", response, apex.SummaryOpts{
-	MaxAge:     5 * time.Minute,
-	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	AgeBuckets: 5,
-})
+metrics.SummaryObserve("test_summary", response)
 
 // With labels
 metrics = metrics.WithValues("label1", "label2")
-metrics.SummaryObserve("test_summary", response, apex.SummaryOpts{
-	MaxAge:     5 * time.Minute,
-	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	AgeBuckets: 5,
-, "value1", "value2")
+metrics.SummaryObserve("test_summary", response, "value1", "value2")
 ```
 
 #### `SummaryTimer(string, ...string)`
@@ -270,6 +262,6 @@ defer timer.ObserveDuration()
 
 // With labels
 metrics = metrics.WithValues("label1", "label2")
-timer := m.SummaryTimer("response", apex.SummaryOpts{}, "value1", "value2")
+timer := m.SummaryTimer("response", "value1", "value2")
 defer timer.ObserveDuration()
 ```
