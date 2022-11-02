@@ -23,29 +23,48 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func Register(reg prometheus.Registerer, metric prometheus.Collector) error {
-	if err := reg.Register(metric); err != nil {
-		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {
-			return ErrAlreadyRegistered
-		} else {
-			return err
-		}
-	}
-	return nil
+type SummaryVec struct {
+	name string
+	vec  *prometheus.SummaryVec
 }
 
-// this is way too brittle
-func SlicePairsToMap(pairs []string) map[string]string {
-	m := make(map[string]string)
-	for i := 0; i < len(pairs); i += 2 {
-		m[pairs[i]] = pairs[i+1]
+func NewSummaryVec(registerer prometheus.Registerer, name string, opts SummaryOpts, labels ...string) (*SummaryVec, error) {
+	summary := prometheus.NewSummaryVec(prometheus.SummaryOpts{
+		Name:       name,
+		Help:       DefaultHelpString,
+		Objectives: opts.Objectives,
+		MaxAge:     opts.MaxAge,
+		AgeBuckets: opts.AgeBuckets,
+	}, labels)
+
+	if err := Register(registerer, summary); err != nil {
+		return nil, err
 	}
-	return m
+
+	return &SummaryVec{
+		name: name,
+		vec:  summary,
+	}, nil
 }
 
-func prefixedName(prefix, name string, sep rune) string {
-	if prefix == "" {
-		return name
-	}
-	return prefix + string(sep) + name
+func (s *SummaryVec) Observe(v float64, lv ...string) {
+	s.vec.WithLabelValues(lv...).Observe(v)
 }
+
+func (s *SummaryVec) Timer(lv ...string) *Timer {
+	return NewTimer(s.vec, lv...)
+}
+
+func (s *SummaryVec) Name() string {
+	return s.name
+}
+
+func (s *SummaryVec) Type() MetricType {
+	return SummaryType
+}
+
+func (s *SummaryVec) Vec() prometheus.Collector {
+	return s.vec
+}
+
+var _ MetricVec = &SummaryVec{}

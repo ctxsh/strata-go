@@ -16,6 +16,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 package apex
 
 import (
@@ -26,13 +27,13 @@ type Timer struct {
 	timer *prometheus.Timer
 }
 
-func NewTimer(collector prometheus.Collector, labels Labels) *Timer {
+func NewTimer(collector prometheus.Collector, lv ...string) *Timer {
 	t := &Timer{}
 	switch metric := collector.(type) {
 	case *prometheus.HistogramVec:
-		t.timer = prometheus.NewTimer(metric.With(prometheus.Labels(labels)))
+		t.timer = prometheus.NewTimer(metric.WithLabelValues(lv...))
 	case *prometheus.SummaryVec:
-		t.timer = prometheus.NewTimer(metric.With(prometheus.Labels(labels)))
+		t.timer = prometheus.NewTimer(metric.WithLabelValues(lv...))
 	default:
 		t.timer = nil
 	}

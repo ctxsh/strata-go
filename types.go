@@ -16,16 +16,25 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 package apex
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/prometheus/client_golang/prometheus"
+)
 
-type Labels prometheus.Labels
+type MetricType string
 
-func (l Labels) Keys() []string {
-	keys := make([]string, 0)
-	for k := range l {
-		keys = append(keys, k)
-	}
-	return keys
+const (
+	CounterType       MetricType = "counter"
+	GaugeType         MetricType = "gauge"
+	SummaryType       MetricType = "summary"
+	HistogramType     MetricType = "histogram"
+	DefaultHelpString string     = "created automagically by apex"
+)
+
+type MetricVec interface {
+	Name() string
+	Type() MetricType
+	Vec() prometheus.Collector
 }

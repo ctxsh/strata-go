@@ -23,29 +23,45 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func Register(reg prometheus.Registerer, metric prometheus.Collector) error {
-	if err := reg.Register(metric); err != nil {
-		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {
-			return ErrAlreadyRegistered
-		} else {
-			return err
-		}
-	}
-	return nil
+type CounterVec struct {
+	vec  *prometheus.CounterVec
+	name string
 }
 
-// this is way too brittle
-func SlicePairsToMap(pairs []string) map[string]string {
-	m := make(map[string]string)
-	for i := 0; i < len(pairs); i += 2 {
-		m[pairs[i]] = pairs[i+1]
+func NewCounterVec(registerer prometheus.Registerer, name string, labels ...string) (*CounterVec, error) {
+	counter := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: name,
+		Help: DefaultHelpString,
+	}, labels)
+
+	if err := Register(registerer, counter); err != nil {
+		return nil, err
 	}
-	return m
+
+	return &CounterVec{
+		name: name,
+		vec:  counter,
+	}, nil
 }
 
-func prefixedName(prefix, name string, sep rune) string {
-	if prefix == "" {
-		return name
-	}
-	return prefix + string(sep) + name
+func (c *CounterVec) Inc(lv ...string) {
+	c.vec.WithLabelValues(lv...).Inc()
 }
+
+func (c *CounterVec) Add(v float64, lv ...string) {
+	c.vec.WithLabelValues(lv...).Add(v)
+}
+
+func (c *CounterVec) Name() string {
+	return c.name
+}
+
+func (c *CounterVec) Type() MetricType {
+	return CounterType
+}
+
+func (c *CounterVec) Vec() prometheus.Collector {
+	return c.vec
+}
+
+var _ MetricVec = &CounterVec{}
