@@ -176,7 +176,7 @@ metrics.GaugeSub("gauge_with_values", 2.0, "value1", "value2")
 
 ### Histogram
 
-A histogram samples observations and counts them in configurable buckets. Most often histograms are used to measure durations or sizes.  Histograms expose multiple measurements during a scrape.  These include bucket measurements in the format `<name>_bucket{le="<upper_bound>"}`, the total sum of observed values as `<name>_sum`, and the number of observered events in the format of `<name>_count`.  Histograms buckets are configurable through the `Buckets` struct in `MetricsOpts` which allow overrides of the following attributes:
+A histogram samples observations and counts them in configurable buckets. Most often histograms are used to measure durations or sizes.  Histograms expose multiple measurements during a scrape.  These include bucket measurements in the format `<name>_bucket{le="<upper_bound>"}`, the total sum of observed values as `<name>_sum`, and the number of observered events in the format of `<name>_count`.  Histograms buckets are configurable through `HistogramBuckets` in `MetricsOpts` which allow overrides of the following attributes:
 
 * `Buckets`: The time buckets into which observations are counted.  Values must be sorted in increasing order and .  The `+inf` bucket is automatically added to catch values .
 
