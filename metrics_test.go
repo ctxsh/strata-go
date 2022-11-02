@@ -1,83 +1,90 @@
 package apex
 
 import (
-	"strings"
+	"fmt"
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )
 
+var labels = map[string]string{
+	"region": "us-east-1",
+}
+
 func TestMetricsCounter(t *testing.T) {
-	name := "test_counter"
-	help := "created automagically by apex"
-	labels := Labels{"this": "one"}
+	name := "test_total"
+	m := testMetrics().WithLabels("region")
 
-	m := New(MetricsOpts{
-		Namespace: "apex",
-		Subsystem: "example",
-		Separator: ':',
-	})
+	m.CounterInc(name, "us-east-1")
+	vec, err := getCounter(m, prefixedName(m.prefix, name, m.separator))
+	assert.NoError(t, err)
+	CollectAndCompare(t, vec, "apex_example_test_total", "counter", labels, 1.0)
+	m.CounterAdd(name, 5.0, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_test_total", "counter", labels, 6.0)
 
-	fullName, _ := NameBuilder("apex", "example", name, ':')
-
-	elem := m.counters
-	metric, _ := elem.Get(name, Labels(labels))
-
-	m.CounterInc(name, labels)
-	expected := BuildProm(fullName, help, "counter", labels, 1)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)))
-
-	m.CounterAdd(name, 5.0, labels)
-	expected = BuildProm(fullName, help, "counter", labels, 6)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)))
-
-	m.CounterInc(name, labels)
-	expected = BuildProm(fullName, help, "counter", labels, 7)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)))
-
-	m.CounterAdd(name, 6.0, labels)
-	expected = BuildProm(fullName, help, "counter", labels, 13)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)))
+	m1 := m.WithPrefix("next")
+	m1.CounterInc(name, "us-east-1")
+	vec, err = getCounter(m1, prefixedName(m1.prefix, name, m1.separator))
+	assert.NoError(t, err)
+	CollectAndCompare(t, vec, "apex_example_next_test_total", "counter", labels, 1.0)
+	m1.CounterAdd(name, 5.0, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_next_test_total", "counter", labels, 6.0)
 }
 
 func TestMetricsGauge(t *testing.T) {
-	name := "test_gauge"
-	help := "created automagically by apex"
-	labels := Labels{"this": "one"}
+	name := "test_g"
+	m := testMetrics().WithLabels("region")
 
-	m := New(MetricsOpts{
-		Namespace: "apex",
-		Subsystem: "example",
-		Separator: ':',
-	})
+	m.GaugeInc(name, "us-east-1")
+	vec, err := getGauge(m, prefixedName(m.prefix, name, m.separator))
+	assert.NoError(t, err)
+	CollectAndCompare(t, vec, "apex_example_test_g", "gauge", labels, 1.0)
+	m.GaugeAdd(name, 5.0, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_test_g", "gauge", labels, 6.0)
+	m.GaugeSet(name, 10.0, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_test_g", "gauge", labels, 10.0)
+	m.GaugeDec(name, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_test_g", "gauge", labels, 9.0)
+	m.GaugeSub(name, 9.0, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_test_g", "gauge", labels, 0.0)
 
-	fullName, _ := NameBuilder("apex", "example", name, ':')
+	m1 := m.WithPrefix("next")
+	m1.GaugeInc(name, "us-east-1")
+	vec, err = getGauge(m, prefixedName(m1.prefix, name, m1.separator))
+	assert.NoError(t, err)
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 1.0)
+	m1.GaugeAdd(name, 5.0, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 6.0)
+	m1.GaugeSet(name, 10.0, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 10.0)
+	m1.GaugeDec(name, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 9.0)
+	m1.GaugeSub(name, 9.0, "us-east-1")
+	CollectAndCompare(t, vec, "apex_example_next_test_g", "gauge", labels, 0.0)
+}
 
-	elem := m.gauges
-	metric, _ := elem.Get(name, Labels(labels))
+func getCounter(metrics *Metrics, n string) (MetricVec, error) {
+	if v, ok := metrics.store.counters[n]; ok {
+		return v, nil
+	}
+	return nil, fmt.Errorf("missing counter")
+}
 
-	m.GaugeSet(name, 100, labels)
-	expected := BuildProm(fullName, help, "gauge", labels, 100)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
+func getGauge(metrics *Metrics, n string) (MetricVec, error) {
+	if v, ok := metrics.store.gauges[n]; ok {
+		return v, nil
+	}
+	return nil, fmt.Errorf("missing gauge")
+}
 
-	m.GaugeInc(name, labels)
-	expected = BuildProm(fullName, help, "gauge", labels, 101)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
+func testMetrics() *Metrics {
+	registry := prometheus.NewPedanticRegistry()
+	metrics := New(MetricsOpts{
+		Separator:    '_',
+		Registry:     registry,
+		PanicOnError: true,
+	}).WithPrefix("apex", "example")
 
-	m.GaugeInc(name, labels)
-	expected = BuildProm(fullName, help, "gauge", labels, 102)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
-
-	m.GaugeDec(name, labels)
-	expected = BuildProm(fullName, help, "gauge", labels, 101)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
-
-	m.GaugeAdd(name, 9, labels)
-	expected = BuildProm(fullName, help, "gauge", labels, 110)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
-
-	m.GaugeSub(name, 109, labels)
-	expected = BuildProm(fullName, help, "gauge", labels, 1)
-	assert.NoError(t, testutil.CollectAndCompare(metric, strings.NewReader(expected)), "name")
+	return metrics
 }

@@ -16,172 +16,242 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 package apex
 
 import (
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+const (
+	DefaultTimeout                  = 5 * time.Second
+	DefaultMaxAge     time.Duration = 10 * time.Minute
+	DefaultAgeBuckets uint32        = 5
+)
+
+var (
+	DefaultObjectives = map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
+)
+
+type SummaryOpts struct {
+	Objectives map[float64]float64
+	MaxAge     time.Duration
+	AgeBuckets uint32
+}
+
 type MetricsOpts struct {
-	BindAddr     string
-	Namespace    string
-	Subsystem    interface{}
-	Path         string
-	Port         int
-	Separator    rune
-	PanicOnError bool
+	ConstantLabels   []string
+	HistogramBuckets []float64
+	SummaryOpts      *SummaryOpts
+	Registry         *prometheus.Registry
+	Separator        rune
+	BindAddr         string
+	Path             string
+	Port             int
+	PanicOnError     bool
+	Prefix           []string
 }
 
 type Metrics struct {
-	opts MetricsOpts
-
-	counters   *Counters
-	gauges     *Gauges
-	histograms *Histograms
-	summaries  *Summaries
-	errors     *ApexInternalErrorMetrics
+	separator        rune
+	prefix           string
+	path             string
+	port             int
+	bindAddr         string
+	histogramBuckets []float64
+	summaryOpts      *SummaryOpts
+	store            *Store
+	labels           []string
+	errors           *ApexInternalErrorMetrics
+	panicOnError     bool
+	registry         *prometheus.Registry
+	registerer       prometheus.Registerer
 }
 
 func New(opts MetricsOpts) *Metrics {
-	m := &Metrics{
-		counters:   NewCounters(opts.Namespace, opts.Subsystem, opts.Separator),
-		gauges:     NewGauges(opts.Namespace, opts.Subsystem, opts.Separator),
-		histograms: NewHistograms(opts.Namespace, opts.Subsystem, opts.Separator),
-		summaries:  NewSummaries(opts.Namespace, opts.Subsystem, opts.Separator),
+	opts = defaulted(opts)
+	prefix := strings.Join(opts.Prefix, string(opts.Separator))
+	labels := SlicePairsToMap(opts.ConstantLabels)
+	return &Metrics{
+		prefix:           prefix,
+		separator:        opts.Separator,
+		port:             opts.Port,
+		path:             opts.Path,
+		bindAddr:         opts.BindAddr,
+		histogramBuckets: opts.HistogramBuckets,
+		summaryOpts:      opts.SummaryOpts,
+		store:            newStore(),
+		labels:           []string{},
+		panicOnError:     opts.PanicOnError,
+		errors:           NewApexInternalErrorMetrics(opts.Prefix, opts.Separator),
+		registry:         opts.Registry,
+		registerer:       prometheus.WrapRegistererWith(prometheus.Labels(labels), opts.Registry),
 	}
-	m.opts = defaults(opts)
-	m.errors = NewApexInternalErrorMetrics(opts.Namespace, opts.Subsystem, opts.Separator)
-	return m
 }
 
 func (m *Metrics) Start() error {
 	mux := http.NewServeMux()
-	mux.Handle(m.opts.Path, promhttp.Handler())
-	addr := fmt.Sprintf("%s:%d", m.opts.BindAddr, m.opts.Port)
+	mux.Handle(m.path, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
+		Timeout: DefaultTimeout,
+	}))
+	addr := fmt.Sprintf("%s:%d", m.bindAddr, m.port)
 	return http.ListenAndServe(addr, mux)
 }
 
-func (m *Metrics) CounterInc(name string, labels Labels) {
-	defer m.recover(name, "CounterInc")
-
-	if err := m.counters.Inc(name, labels); err != nil {
-		m.emitError(err, name, "CounterInc")
-	}
+func (m *Metrics) WithPrefix(prefix ...string) *Metrics {
+	p := strings.Join(prefix, string(m.separator))
+	newPrefix := prefixedName(m.prefix, p, m.separator)
+	metrics := m.copy()
+	metrics.prefix = newPrefix
+	// Labels are reset when a new prefix is added
+	metrics.labels = []string{}
+	return metrics
 }
 
-func (m *Metrics) CounterAdd(name string, value float64, labels Labels) {
-	defer m.recover(name, "CounterAdd")
-
-	if err := m.counters.Add(name, value, labels); err != nil {
-		m.emitError(err, name, "CounterAdd")
-	}
+func (m *Metrics) WithLabels(labels ...string) *Metrics {
+	metrics := m.copy()
+	metrics.labels = labels
+	return metrics
 }
 
-func (m *Metrics) GaugeSet(name string, value float64, labels Labels) {
-	defer m.recover(name, "GaugeSet")
-
-	if err := m.gauges.Set(name, value, labels); err != nil {
-		m.emitError(err, name, "GaugeSet")
-	}
-}
-
-func (m *Metrics) GaugeInc(name string, labels Labels) {
-	defer m.recover(name, "GaugeInc")
-
-	if err := m.gauges.Inc(name, labels); err != nil {
-		m.emitError(err, name, "GaugeInc")
-	}
-}
-
-func (m *Metrics) GaugeDec(name string, labels Labels) {
-	defer m.recover(name, "GaugeDec")
-
-	if err := m.gauges.Dec(name, labels); err != nil {
-		m.emitError(err, name, "GaugeDec")
-	}
-}
-
-func (m *Metrics) GaugeAdd(name string, value float64, labels Labels) {
-	defer m.recover(name, "GaugeAdd")
-
-	if err := m.gauges.Add(name, value, labels); err != nil {
-		m.emitError(err, name, "GaugeAdd")
-	}
-}
-
-func (m *Metrics) GaugeSub(name string, value float64, labels Labels) {
-	defer m.recover(name, "GaugeSub")
-
-	if err := m.gauges.Sub(name, value, labels); err != nil {
-		m.emitError(err, name, "GaugeSub")
-	}
-}
-
-func (m *Metrics) HistogramObserve(name string, value float64, labels Labels, opts HistogramOpts) {
-	defer m.recover(name, "HistogramObserve")
-
-	if err := m.histograms.Observe(name, value, labels, opts); err != nil {
-		m.emitError(err, name, "HistogramObserve")
-	}
-}
-
-func (m *Metrics) HistogramTimer(name string, labels Labels, opts HistogramOpts) *Timer {
-	defer m.recover(name, "HistogramTimers")
-
-	timer, err := m.histograms.Timer(name, labels, opts)
-	if err != nil {
-		m.emitError(err, name, "HistogramTimer")
-	}
-	return timer
-}
-
-func (m *Metrics) SummaryObserve(name string, value float64, labels Labels, opts SummaryOpts) {
-	defer m.recover(name, "SummaryObserve")
-
-	if err := m.summaries.Observe(name, value, labels, opts); err != nil {
-		m.emitError(err, name, "SummaryObserve")
-	}
-}
-
-func (m *Metrics) SummaryTimer(name string, labels Labels, opts SummaryOpts) *Timer {
-	defer m.recover(name, "SummaryTimers")
-
-	timer, err := m.summaries.Timer(name, labels, opts)
+func (m *Metrics) CounterInc(name string, lv ...string) {
+	defer m.recover(name, "counter_inc")
+	vec, err := m.store.getCounter(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
 	if err != nil {
 		m.emitError(err, name, "counter_inc")
+		return
 	}
-	return timer
+	vec.Inc(lv...)
 }
 
-func defaults(opts MetricsOpts) MetricsOpts {
-	// opts.Namespace default is empty
-	// opts.Subsystem default is empty
-	// opts.MustRegister default is false
-	// opts.PanicOnError default is false
-	if opts.BindAddr == "" {
-		opts.BindAddr = "0.0.0.0"
+func (m *Metrics) CounterAdd(name string, v float64, lv ...string) {
+	defer m.recover(name, "counter_add")
+	vec, err := m.store.getCounter(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
+	if err != nil {
+		m.emitError(err, name, "counter_add")
+		return
 	}
+	vec.Add(v, lv...)
+}
 
-	if opts.Path == "" {
-		opts.Path = "/metrics"
+func (m *Metrics) GaugeSet(name string, v float64, lv ...string) {
+	defer m.recover(name, "gauge_set")
+	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
+	if err != nil {
+		m.emitError(err, name, "gauge_set")
+		return
 	}
+	vec.Set(v, lv...)
+}
 
-	if opts.Port == 0 {
-		opts.Port = 9000
+func (m *Metrics) GaugeInc(name string, lv ...string) {
+	defer m.recover(name, "gauge_inc")
+	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
+	if err != nil {
+		m.emitError(err, name, "gauge_inc")
+		return
 	}
+	vec.Inc(lv...)
+}
 
-	if opts.Separator == 0 {
-		opts.Separator = '_'
+func (m *Metrics) GaugeDec(name string, lv ...string) {
+	defer m.recover(name, "gauge_dec")
+	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
+	if err != nil {
+		m.emitError(err, name, "gauge_dec")
+		return
 	}
+	vec.Dec(lv...)
+}
 
-	return opts
+func (m *Metrics) GaugeAdd(name string, v float64, lv ...string) {
+	defer m.recover(name, "gauge_add")
+	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
+	if err != nil {
+		m.emitError(err, name, "gauge_add")
+		return
+	}
+	vec.Add(v, lv...)
+}
+
+func (m *Metrics) GaugeSub(name string, v float64, lv ...string) {
+	defer m.recover(name, "gauge_sub")
+	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
+	if err != nil {
+		m.emitError(err, name, "gauge_sub")
+		return
+	}
+	vec.Sub(v, lv...)
+}
+
+func (m *Metrics) SummaryObserve(name string, v float64, lv ...string) {
+	defer m.recover(name, "summary_observe")
+	vec, err := m.store.getSummary(m.registerer, prefixedName(m.prefix, name, m.separator), *m.summaryOpts, m.labels...)
+	if err != nil {
+		m.emitError(err, name, "summary_timer")
+		return
+	}
+	vec.Observe(v, lv...)
+}
+
+func (m *Metrics) SummaryTimer(name string, lv ...string) *Timer {
+	defer m.recover(name, "summary_timer")
+	vec, err := m.store.getSummary(m.registerer, prefixedName(m.prefix, name, m.separator), *m.summaryOpts, m.labels...)
+	if err != nil {
+		m.emitError(err, name, "summary_timer")
+		// TODO: this is dangerous, fix me
+		return nil
+	}
+	return vec.Timer(lv...)
+}
+
+func (m *Metrics) HistogramObserve(name string, v float64, lv ...string) {
+	defer m.recover(name, "histogram_observe")
+	vec, err := m.store.getHistogram(m.registerer, prefixedName(m.prefix, name, m.separator), m.histogramBuckets, m.labels...)
+	if err != nil {
+		m.emitError(err, name, "histogram_observe")
+		return
+	}
+	vec.Observe(v, lv...)
+}
+
+func (m *Metrics) HistogramTimer(name string, lv ...string) *Timer {
+	defer m.recover(name, "histogram_timer")
+	vec, err := m.store.getHistogram(m.registerer, prefixedName(m.prefix, name, m.separator), m.histogramBuckets, m.labels...)
+	if err != nil {
+		m.emitError(err, name, "histogram_timer")
+		// TODO: this is dangerous, fix me
+		return nil
+	}
+	return vec.Timer(lv...)
+}
+
+func (m *Metrics) copy() *Metrics {
+	return &Metrics{
+		prefix:           m.prefix,
+		separator:        m.separator,
+		port:             m.port,
+		path:             m.path,
+		bindAddr:         m.bindAddr,
+		histogramBuckets: m.histogramBuckets,
+		summaryOpts:      m.summaryOpts,
+		store:            m.store,
+		labels:           m.labels,
+		panicOnError:     m.panicOnError,
+		errors:           m.errors,
+		registry:         m.registry,
+		registerer:       m.registerer,
+	}
 }
 
 func (m *Metrics) emitError(err error, name string, fn string) {
-	if m.opts.PanicOnError {
+	if m.panicOnError {
 		panic(err)
 	}
 
@@ -195,8 +265,61 @@ func (m *Metrics) emitError(err error, name string, fn string) {
 	}
 }
 
+func defaulted(opts MetricsOpts) MetricsOpts {
+	// opts.Prefix default is empty
+	// opts.MustRegister default is false
+	// opts.PanicOnError default is false
+	if opts.Registry == nil {
+		opts.Registry = prometheus.NewRegistry()
+	}
+
+	if opts.HistogramBuckets == nil {
+		opts.HistogramBuckets = prometheus.DefBuckets
+	}
+
+	if opts.BindAddr == "" {
+		opts.BindAddr = "0.0.0.0"
+	}
+
+	if opts.Path == "" {
+		opts.Path = "/metrics"
+	}
+
+	if opts.Port == 0 {
+		opts.Port = 9090
+	}
+
+	if opts.Separator == 0 {
+		opts.Separator = '_'
+	}
+
+	opts.SummaryOpts = defaultedSummaryOpts(opts.SummaryOpts)
+
+	return opts
+}
+
+func defaultedSummaryOpts(opts *SummaryOpts) *SummaryOpts {
+	if opts == nil {
+		opts = &SummaryOpts{}
+	}
+
+	if opts.AgeBuckets < 1 {
+		opts.AgeBuckets = DefaultAgeBuckets
+	}
+
+	if opts.MaxAge < 1 {
+		opts.MaxAge = DefaultMaxAge
+	}
+
+	if opts.Objectives == nil {
+		opts.Objectives = DefaultObjectives
+	}
+
+	return opts
+}
+
 func (m *Metrics) recover(name string, fn string) {
-	if !m.opts.PanicOnError {
+	if !m.panicOnError {
 		if r := recover(); r != nil {
 			m.errors.PanicRecovery(name, fn)
 		}

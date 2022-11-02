@@ -16,6 +16,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 package apex
 
 import (
@@ -43,41 +44,23 @@ type ApexInternalErrorMetrics struct {
 	errAlreadyRegistered  *prometheus.CounterVec
 }
 
-func NewApexInternalErrorMetrics(ns string, sub interface{}, sep rune) *ApexInternalErrorMetrics {
-	var builder strings.Builder
-
-	if ns != "" {
-		builder.WriteString(ns)
-		builder.WriteRune(sep)
-	}
-
-	ss := subSystemToString(sub, sep)
-	if ss != "" {
-		builder.WriteString(ss)
-		builder.WriteRune(sep)
-	}
-
-	builder.WriteString("apex")
-	builder.WriteRune(sep)
-	builder.WriteString("error")
-	builder.WriteRune(sep)
-
-	prefix := builder.String()
+func NewApexInternalErrorMetrics(prefixes []string, sep rune) *ApexInternalErrorMetrics {
+	prefix := strings.Join(prefixes, "_")
 
 	errPanicRecovery := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: prefix + "panic_recovery",
+		Name: prefix + "_panic_recovery",
 	}, []string{"name", "type"})
 
 	errInvalidMetricName := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: prefix + "invalid_metric_name",
+		Name: prefix + "_invalid_metric_name",
 	}, []string{"name", "type"})
 
 	errRegistrationFailed := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: prefix + "registration_failed",
+		Name: prefix + "_registration_failed",
 	}, []string{"name", "type"})
 
 	errAlreadyRegistered := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: prefix + "already_registered",
+		Name: prefix + "_already_registered",
 	}, []string{"name", "type"})
 
 	_ = register(errPanicRecovery)
