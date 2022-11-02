@@ -184,7 +184,7 @@ Add a single observation to the histogram.
 
 ```go
 m := apex.New(apex.MetricsOpts{
-	Buckets: []float{0.01, 0.5, 0.1, 1, 5, 10}
+	HistogramBuckets: []float{0.01, 0.5, 0.1, 1, 5, 10}
 })
 
 // Without labels
@@ -201,7 +201,7 @@ Create a histogram timer.
 
 ```go
 m := apex.New(apex.MetricsOpts{
-	Buckets: apex.ExponentialBuckets(100, 1.2, 3)
+	HistogramBuckets: apex.ExponentialBuckets(100, 1.2, 3)
 })
 
 // Without labels
