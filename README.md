@@ -16,8 +16,8 @@ Initialize the metrics collectors using the `apex.New` function.  There are seve
 ```golang
 metrics := apex.New(apex.MetricsOpts{
 	ConstantLabels: []string{"role", "server"}
-  Separator:    ':',
-  PanicOnError: false,
+	Separator:    ':',
+	PanicOnError: false,
 })
 ```
 
