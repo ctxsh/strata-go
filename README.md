@@ -27,7 +27,7 @@ metrics := apex.New(apex.MetricsOpts{
 |--------|---------|-------------|
 | BindAddr | `0.0.0.0` | The address the promethus collector will listen on for connections |
 | ConstantLabels | empty | An array of label/value pairs that will be constant across all metrics. |
-| HistogramBuckets | []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10} | Buckets used for histogram observation counts |
+| HistogramBuckets | `[]float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}` | Buckets used for histogram observation counts |
 | PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `apex_errors_panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |
 | Path | `/metrics` | The path used by the HTTP server. |
 | Port | `9090` | The port used by the HTTP server. |
@@ -41,7 +41,7 @@ metrics := apex.New(apex.MetricsOpts{
 |--------|---------|-------------|
 | AgeBuckets | 5 | AgeBuckets is the number of buckets used to exclude observations that are older than MaxAge from the summary. |
 | MaxAge | 10 minutes | MaxAge defines the duration for which an observation stays relevant for the summary. |
-| Objectives | map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001} | Objectives defines the quantile rank estimates with their respective absolute error. |
+| Objectives | `map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}` | Objectives defines the quantile rank estimates with their respective absolute error. |
 
 
 ### Prefixes and Labels
