@@ -23,6 +23,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// SummaryVec is a wrapper around the prometheus SummaryVec.
+//
+// It bundles a set of summaries used if you want to count the same thing
+// partitioned by various dimensions.
 type SummaryVec struct {
 	name string
 	vec  *prometheus.SummaryVec
@@ -47,22 +51,27 @@ func NewSummaryVec(registerer prometheus.Registerer, name string, opts SummaryOp
 	}, nil
 }
 
+// Observe adds a single observation to the summary.
 func (s *SummaryVec) Observe(v float64, lv ...string) {
 	s.vec.WithLabelValues(lv...).Observe(v)
 }
 
+// Timer returns a new summary timer.
 func (s *SummaryVec) Timer(lv ...string) *Timer {
 	return NewTimer(s.vec, lv...)
 }
 
+// Name returns the name of the SummaryVec.
 func (s *SummaryVec) Name() string {
 	return s.name
 }
 
+// Type returns the metric type.
 func (s *SummaryVec) Type() MetricType {
 	return SummaryType
 }
 
+// Vec returns the prometheus SummaryVec.
 func (s *SummaryVec) Vec() prometheus.Collector {
 	return s.vec
 }

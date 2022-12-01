@@ -28,6 +28,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// CollectAndCompare is a helper function for testing.  It creates prometheus
+// strings and compares them with the collector using the CollectAndCompare
+// test utility.
 func CollectAndCompare(
 	t *testing.T,
 	vec MetricVec,

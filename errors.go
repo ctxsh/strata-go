@@ -28,15 +28,24 @@ import (
 type ApexError string
 
 const (
-	ErrInvalidMetricName  = ApexError("Invalid metric name")
+	// ErrInvalidMetricName is returned when a metric name contains other
+	// characters other than [a-zA-Z_-].
+	ErrInvalidMetricName = ApexError("Invalid metric name")
+	// ErrRegistrationFailed is returned if prometheus is unable to register
+	// the collector.
 	ErrRegistrationFailed = ApexError("Unable to register collector")
-	ErrAlreadyRegistered  = ApexError("metric is already registered")
+	// ErrAlreadyRegistered is returned if prometheus has already registered
+	// a collector.
+	ErrAlreadyRegistered = ApexError("metric is already registered")
 )
 
+// Error implements the error interface for ApexError
 func (e ApexError) Error() string {
 	return string(e)
 }
 
+// ApexInternalErrorMetrics provides internal counters for recovered
+// errors from the prometheus collector when PanicOnError is false.
 type ApexInternalErrorMetrics struct {
 	errPanicRecovery      *prometheus.CounterVec
 	errInvalidMetricName  *prometheus.CounterVec
@@ -44,6 +53,8 @@ type ApexInternalErrorMetrics struct {
 	errAlreadyRegistered  *prometheus.CounterVec
 }
 
+// NewApexInternalErrorMetrics defines and registers the internal collectors and
+// returns a new ApexInternalErrorMetrics struct.
 func NewApexInternalErrorMetrics(prefixes []string, sep rune) *ApexInternalErrorMetrics {
 	prefix := strings.Join(prefixes, "_")
 
@@ -76,6 +87,8 @@ func NewApexInternalErrorMetrics(prefixes []string, sep rune) *ApexInternalError
 	}
 }
 
+// PanicRecovery provides a helper function for incrementing the errPanicRecovery
+// collector.
 func (a *ApexInternalErrorMetrics) PanicRecovery(name string, t string) {
 	a.errPanicRecovery.With(prometheus.Labels{
 		"name": name,
@@ -83,6 +96,8 @@ func (a *ApexInternalErrorMetrics) PanicRecovery(name string, t string) {
 	}).Inc()
 }
 
+// InvalidMeticName provides a helper function for incrementing the errInvalidMetricName
+// collector.
 func (a *ApexInternalErrorMetrics) InvalidMetricName(name string, t string) {
 	a.errInvalidMetricName.With(prometheus.Labels{
 		"name": name,
@@ -90,6 +105,8 @@ func (a *ApexInternalErrorMetrics) InvalidMetricName(name string, t string) {
 	}).Inc()
 }
 
+// RegistrationFailed provides a helper function for incrementing the errRegistrationFailed
+// collector.
 func (a *ApexInternalErrorMetrics) RegistrationFailed(name string, t string) {
 	a.errRegistrationFailed.With(prometheus.Labels{
 		"name": name,
@@ -97,6 +114,8 @@ func (a *ApexInternalErrorMetrics) RegistrationFailed(name string, t string) {
 	}).Inc()
 }
 
+// AlreadyRegistered provides a helper function for incrementing the errAlreadyRegistered
+// collector.
 func (a *ApexInternalErrorMetrics) AlreadyRegistered(name string, t string) {
 	a.errAlreadyRegistered.With(prometheus.Labels{
 		"name": name,

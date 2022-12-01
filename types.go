@@ -26,13 +26,23 @@ import (
 type MetricType string
 
 const (
-	CounterType       MetricType = "counter"
-	GaugeType         MetricType = "gauge"
-	SummaryType       MetricType = "summary"
-	HistogramType     MetricType = "histogram"
-	DefaultHelpString string     = "created automagically by apex"
+	// CounterType represents an apex wrapper around the prometheus CounterVec
+	// type.
+	CounterType MetricType = "counter"
+	// GaugeType represents an apex wrapper around the prometheus GaugeVec
+	// type.
+	GaugeType MetricType = "gauge"
+	// SummaryType represents an apex wrapper around the prometheus SummaryVec
+	// type.
+	SummaryType MetricType = "summary"
+	// HistogramType represents an apex wrapper around the prometheus HistogramVec
+	// type.
+	HistogramType MetricType = "histogram"
+	// Defines the metrics help string.  This is currently not settable.
+	DefaultHelpString string = "created automagically by apex"
 )
 
+// MetricVec defines the interface for apex metrics collector wrappers.
 type MetricVec interface {
 	Name() string
 	Type() MetricType

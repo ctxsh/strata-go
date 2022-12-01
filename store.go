@@ -2,6 +2,7 @@ package apex
 
 import "github.com/prometheus/client_golang/prometheus"
 
+// Store manages all of the prometheus collectors
 type Store struct {
 	counters   map[string]*CounterVec
 	gauges     map[string]*GaugeVec

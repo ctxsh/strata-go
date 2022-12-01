@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Register registers a collector with prometheus.
 func Register(reg prometheus.Registerer, metric prometheus.Collector) error {
 	if err := reg.Register(metric); err != nil {
 		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {
@@ -34,8 +35,9 @@ func Register(reg prometheus.Registerer, metric prometheus.Collector) error {
 	return nil
 }
 
-// this is way too brittle
+// SlicePairsToMap copies key value pairs to a map.
 func SlicePairsToMap(pairs []string) map[string]string {
+	// TODO: this is too brittle. Fix me.
 	m := make(map[string]string)
 	for i := 0; i < len(pairs); i += 2 {
 		m[pairs[i]] = pairs[i+1]

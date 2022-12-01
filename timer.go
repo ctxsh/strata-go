@@ -23,10 +23,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Timer is a helper type to time functions.
 type Timer struct {
 	timer *prometheus.Timer
 }
 
+// NewTimer creates a new Timer.
 func NewTimer(collector prometheus.Collector, lv ...string) *Timer {
 	t := &Timer{}
 	switch metric := collector.(type) {
@@ -41,12 +43,15 @@ func NewTimer(collector prometheus.Collector, lv ...string) *Timer {
 	return t
 }
 
+// Func allows the use of ordinary functions as Observers.
 func (t *Timer) Func(name string, fn func(float64)) *Timer {
 	return &Timer{
 		timer: prometheus.NewTimer(prometheus.ObserverFunc(fn)),
 	}
 }
 
+// ObserveDuration records the duration that has passed between the time that
+// the Timer was created.
 func (t *Timer) ObserveDuration() {
 	if t.timer != nil {
 		t.timer.ObserveDuration()
