@@ -35,29 +35,53 @@ const (
 	DefaultAgeBuckets uint32        = 5
 )
 
-var (
-	DefaultObjectives = map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
-)
-
 type SummaryOpts struct {
+	// Objectives defines the quantile rank estimates with their respective
+	// absolute error.
 	Objectives map[float64]float64
-	MaxAge     time.Duration
+	// MaxAge defines the duration for which an observation stays relevant
+	// for the summary.
+	MaxAge time.Duration
+	// AgeBuckets is the number of buckets used to exclude observations that
+	// are older than MaxAge from the summary.
 	AgeBuckets uint32
 }
 
+// MetricsOpts defines options that are available for the metrics wrapper.
 type MetricsOpts struct {
-	ConstantLabels   []string
+	// ConstantLabels is an array of label/value pairs that will be constant
+	// across all metrics.
+	ConstantLabels []string
+	// HistogramBuckets are buckets used for histogram observation counts.
 	HistogramBuckets []float64
-	SummaryOpts      *SummaryOpts
-	Registry         *prometheus.Registry
-	Separator        rune
-	BindAddr         string
-	Path             string
-	Port             int
-	PanicOnError     bool
-	Prefix           []string
+	// SummaryOpts defines the options available to summary collectors.
+	SummaryOpts *SummaryOpts
+	// Registry is the prometheus registry that will be used to register
+	// collectors.
+	Registry *prometheus.Registry
+	// Separator is the separator that will be used to join the metric name
+	// components.
+	Separator rune
+	// BindAddr is the address the promethus collector will listen on for
+	// connections.
+	BindAddr string
+	// Path is the path used by the HTTP server.
+	Path string
+	// Port is the path used by the HTTP server.
+	Port int
+	// PanicOnError maintains the default behavior of prometheus to panic on
+	// errors. If this value is set to false, the library attempts to recover
+	// from any panics and emits an internally managed metric
+	// apex_errors_panic_recovery to inform the operator that visibility is
+	// degraded. If set to true the original behavior is maintained and all
+	// errors are treated as panics.
+	PanicOnError bool
+	// Prefix is an array of prefixes that will be appended to the metric name.
+	Prefix []string
 }
 
+// Metrics provides a wrapper around the prometheus client to automatically
+// register and collect metrics.
 type Metrics struct {
 	separator        rune
 	prefix           string
@@ -74,6 +98,8 @@ type Metrics struct {
 	registerer       prometheus.Registerer
 }
 
+// New creates a new Apex metrics store using the options that have
+// been provided.
 func New(opts MetricsOpts) *Metrics {
 	opts = defaulted(opts)
 	prefix := strings.Join(opts.Prefix, string(opts.Separator))
@@ -95,15 +121,38 @@ func New(opts MetricsOpts) *Metrics {
 	}
 }
 
+// Start creates a new http server which listens on the TCP address addr
+// and port.
 func (m *Metrics) Start() error {
 	mux := http.NewServeMux()
 	mux.Handle(m.path, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
 		Timeout: DefaultTimeout,
 	}))
-	addr := fmt.Sprintf("%s:%d", m.bindAddr, m.port)
-	return http.ListenAndServe(addr, mux)
+
+	server := &http.Server{
+		Addr:        fmt.Sprintf("%s:%d", m.bindAddr, m.port),
+		ReadTimeout: DefaultTimeout,
+		Handler:     mux,
+	}
+
+	return server.ListenAndServe()
 }
 
+// WithPrefix appends additional prefix values to the metric name. By default
+// metrics are created without prefixes unless added in MetricOpts. For example:
+//
+//	m := apex.New(apex.MetricsOpts{})
+//	// prefix: ""
+//	m.WithPrefix("apex", "example")
+//	// prefix: "apex_example"
+//	m.CounterInc("a_total")
+//	// metric: "apex_example_a_total"
+//	n := m.WithPrefix("component")
+//	// prefix: "apex_example_component"
+//	n.CounterInc("b_total")
+//	// metric: "apex_example_component_b_total"
+//	m.CounterInc("c_total")
+//	// metric: "apex_example_c_total"
 func (m *Metrics) WithPrefix(prefix ...string) *Metrics {
 	p := strings.Join(prefix, string(m.separator))
 	newPrefix := prefixedName(m.prefix, p, m.separator)
@@ -114,12 +163,17 @@ func (m *Metrics) WithPrefix(prefix ...string) *Metrics {
 	return metrics
 }
 
+// WithLabels creates a new metric with the provided labels.  Example:
+//
+//	metrics = metrics.WithValues("label1", "label2")
+//	metrics.GaugeAdd("gauge_with_values", 2.0, "value1", "value2")
 func (m *Metrics) WithLabels(labels ...string) *Metrics {
 	metrics := m.copy()
 	metrics.labels = labels
 	return metrics
 }
 
+// CounterInc increments a counter by 1.
 func (m *Metrics) CounterInc(name string, lv ...string) {
 	defer m.recover(name, "counter_inc")
 	vec, err := m.store.getCounter(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
@@ -130,6 +184,7 @@ func (m *Metrics) CounterInc(name string, lv ...string) {
 	vec.Inc(lv...)
 }
 
+// CounterAdd increments a counter by the provided value.
 func (m *Metrics) CounterAdd(name string, v float64, lv ...string) {
 	defer m.recover(name, "counter_add")
 	vec, err := m.store.getCounter(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
@@ -140,6 +195,7 @@ func (m *Metrics) CounterAdd(name string, v float64, lv ...string) {
 	vec.Add(v, lv...)
 }
 
+// GaugeSet sets a gauge to an arbitrary value.
 func (m *Metrics) GaugeSet(name string, v float64, lv ...string) {
 	defer m.recover(name, "gauge_set")
 	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
@@ -150,6 +206,7 @@ func (m *Metrics) GaugeSet(name string, v float64, lv ...string) {
 	vec.Set(v, lv...)
 }
 
+// GaugeInc increments a gauge by 1.
 func (m *Metrics) GaugeInc(name string, lv ...string) {
 	defer m.recover(name, "gauge_inc")
 	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
@@ -160,6 +217,7 @@ func (m *Metrics) GaugeInc(name string, lv ...string) {
 	vec.Inc(lv...)
 }
 
+// GaugeDec decrements a gauge by 1.
 func (m *Metrics) GaugeDec(name string, lv ...string) {
 	defer m.recover(name, "gauge_dec")
 	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
@@ -170,6 +228,7 @@ func (m *Metrics) GaugeDec(name string, lv ...string) {
 	vec.Dec(lv...)
 }
 
+// GaugeAdd adds an arbitrary value to the gauge.
 func (m *Metrics) GaugeAdd(name string, v float64, lv ...string) {
 	defer m.recover(name, "gauge_add")
 	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
@@ -180,6 +239,7 @@ func (m *Metrics) GaugeAdd(name string, v float64, lv ...string) {
 	vec.Add(v, lv...)
 }
 
+// GaugeSub subtracts an arbitrary value to the gauge.
 func (m *Metrics) GaugeSub(name string, v float64, lv ...string) {
 	defer m.recover(name, "gauge_sub")
 	vec, err := m.store.getGauge(m.registerer, prefixedName(m.prefix, name, m.separator), m.labels...)
@@ -190,6 +250,7 @@ func (m *Metrics) GaugeSub(name string, v float64, lv ...string) {
 	vec.Sub(v, lv...)
 }
 
+// SummaryObserve adds a single observation to the summary.
 func (m *Metrics) SummaryObserve(name string, v float64, lv ...string) {
 	defer m.recover(name, "summary_observe")
 	vec, err := m.store.getSummary(m.registerer, prefixedName(m.prefix, name, m.separator), *m.summaryOpts, m.labels...)
@@ -200,6 +261,11 @@ func (m *Metrics) SummaryObserve(name string, v float64, lv ...string) {
 	vec.Observe(v, lv...)
 }
 
+// SummaryTimer returns a Timer helper to measure duration.  ObserveDuration is
+// used to measure the time. Example:
+//
+//	timer := m.SummaryTimer("response")
+//	defer timer.ObserveDuration()
 func (m *Metrics) SummaryTimer(name string, lv ...string) *Timer {
 	defer m.recover(name, "summary_timer")
 	vec, err := m.store.getSummary(m.registerer, prefixedName(m.prefix, name, m.separator), *m.summaryOpts, m.labels...)
@@ -211,6 +277,7 @@ func (m *Metrics) SummaryTimer(name string, lv ...string) *Timer {
 	return vec.Timer(lv...)
 }
 
+// HistogramObserve adds a single observation to the histogram.
 func (m *Metrics) HistogramObserve(name string, v float64, lv ...string) {
 	defer m.recover(name, "histogram_observe")
 	vec, err := m.store.getHistogram(m.registerer, prefixedName(m.prefix, name, m.separator), m.histogramBuckets, m.labels...)
@@ -221,6 +288,11 @@ func (m *Metrics) HistogramObserve(name string, v float64, lv ...string) {
 	vec.Observe(v, lv...)
 }
 
+// HistogramTimer returns a Timer helper to measure duration.  ObserveDuration is
+// used to measure the time. Example:
+//
+//	timer := m.HistogramTimer("response")
+//	defer timer.ObserveDuration()
 func (m *Metrics) HistogramTimer(name string, lv ...string) *Timer {
 	defer m.recover(name, "histogram_timer")
 	vec, err := m.store.getHistogram(m.registerer, prefixedName(m.prefix, name, m.separator), m.histogramBuckets, m.labels...)
@@ -274,7 +346,7 @@ func defaulted(opts MetricsOpts) MetricsOpts {
 	}
 
 	if opts.HistogramBuckets == nil {
-		opts.HistogramBuckets = prometheus.DefBuckets
+		opts.HistogramBuckets = DefBuckets
 	}
 
 	if opts.BindAddr == "" {

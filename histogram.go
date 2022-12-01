@@ -21,15 +21,25 @@ package apex
 
 import "github.com/prometheus/client_golang/prometheus"
 
+// HistogramOpts defines options that are available to the HistogramVec
+// collectors.
 type HistogramOpts struct {
+	// Buckets defines the observation buckets for the histogram.  Each float
+	// value is the upper inclusive bound of the bucket with +Inf added implicitly.
+	// the default is
 	Buckets []float64
 }
 
+// HistogramVec is a wrapper around the prometheus HistogramVec.
+//
+// It bundles a set of histograms used if you want to count the same thing
+// partitioned by various dimensions.
 type HistogramVec struct {
 	name string
 	vec  *prometheus.HistogramVec
 }
 
+// NewHistogramVec creates, registers, and returns a new HistogramVec.
 func NewHistogramVec(registerer prometheus.Registerer, name string, buckets []float64, labels ...string) (*HistogramVec, error) {
 	summary := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    name,
@@ -55,14 +65,17 @@ func (h *HistogramVec) Timer(lv ...string) *Timer {
 	return NewTimer(h.vec, lv...)
 }
 
+// Name returns the name of the HistogramVec.
 func (g *HistogramVec) Name() string {
 	return g.name
 }
 
+// Type returns the metric type.
 func (g *HistogramVec) Type() MetricType {
 	return HistogramType
 }
 
+// Vec returns the prometheus HistogramVec.
 func (g *HistogramVec) Vec() prometheus.Collector {
 	return g.vec
 }

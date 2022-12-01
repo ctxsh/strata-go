@@ -28,6 +28,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// CollectAndCompare is a helper function for testing.  It creates prometheus
+// strings and compares them with the collector using the CollectAndCompare
+// test utility.
 func CollectAndCompare(
 	t *testing.T,
 	vec MetricVec,
@@ -80,8 +83,8 @@ func writeMetric(builder *strings.Builder, name string, value float64, labels ma
 	builder.WriteString(val + "\n")
 }
 
-// Come back to this later to make it more configurable based on summary options
-func writeQuantiles(builder *strings.Builder, name string, value float64, labels map[string]string) {
+// Come back to this later to make it more configurable based on summary options.
+func writeQuantiles(builder *strings.Builder, name string, value float64, labels map[string]string) { //nolint:unparam
 	val := strconv.FormatFloat(value, 'E', -1, 64)
 
 	for _, q := range []string{"0.5", "0.9", "0.99"} {
@@ -101,8 +104,8 @@ func writeQuantiles(builder *strings.Builder, name string, value float64, labels
 	builder.WriteString("_count 1\n")
 }
 
-// Come back to this later to make it more configurable based on histogram options
-func writeBuckets(builder *strings.Builder, name string, value float64, labels map[string]string) {
+// Come back to this later to make it more configurable based on histogram options.
+func writeBuckets(builder *strings.Builder, name string, value float64, labels map[string]string) { //nolint:unparam
 	val := strconv.FormatFloat(value, 'E', -1, 64)
 
 	le := []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
@@ -123,8 +126,8 @@ func writeBuckets(builder *strings.Builder, name string, value float64, labels m
 		q := strconv.FormatFloat(b, 'E', -1, 64)
 		builder.WriteString(q)
 		builder.WriteString("\"} ")
-		val := strconv.FormatFloat(buckets[b], 'E', -1, 64)
-		builder.WriteString(val + "\n")
+		v := strconv.FormatFloat(buckets[b], 'E', -1, 64)
+		builder.WriteString(v + "\n")
 	}
 
 	builder.WriteString(name)

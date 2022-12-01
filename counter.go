@@ -23,11 +23,18 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// CounterVec is a wrapper around the prometheus CounterVec.
+//
+// It bundles a set of Counters that all share the same Desc, but have different
+// values for their variable labels. This is used if you want to count the same
+// thing partitioned by various dimensions (e.g. number of HTTP requests,
+// partitioned by response code and method).
 type CounterVec struct {
 	vec  *prometheus.CounterVec
 	name string
 }
 
+// NewCounterVec creates, registers, and returns a new CounterVec.
 func NewCounterVec(registerer prometheus.Registerer, name string, labels ...string) (*CounterVec, error) {
 	counter := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: name,
@@ -44,22 +51,29 @@ func NewCounterVec(registerer prometheus.Registerer, name string, labels ...stri
 	}, nil
 }
 
+// Inc increments the counter by 1 with the label values in the order that
+// the labels were defined in NewCounterVec.
 func (c *CounterVec) Inc(lv ...string) {
 	c.vec.WithLabelValues(lv...).Inc()
 }
 
+// Add increases the counter by the given float value with the label values
+// in the order that the labels were defined in NewCounterVec.
 func (c *CounterVec) Add(v float64, lv ...string) {
 	c.vec.WithLabelValues(lv...).Add(v)
 }
 
+// Name returns the name of the CounterVec.
 func (c *CounterVec) Name() string {
 	return c.name
 }
 
+// Type returns the metric type.
 func (c *CounterVec) Type() MetricType {
 	return CounterType
 }
 
+// Vec returns the prometheus CounterVec.
 func (c *CounterVec) Vec() prometheus.Collector {
 	return c.vec
 }

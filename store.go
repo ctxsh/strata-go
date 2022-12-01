@@ -2,6 +2,7 @@ package apex
 
 import "github.com/prometheus/client_golang/prometheus"
 
+// Store manages all of the prometheus collectors.
 type Store struct {
 	counters   map[string]*CounterVec
 	gauges     map[string]*GaugeVec
@@ -18,38 +19,42 @@ func newStore() *Store {
 	}
 }
 
-func (s *Store) getCounter(reg prometheus.Registerer, name string, labels ...string) (vec *CounterVec, err error) {
+func (s *Store) getCounter(reg prometheus.Registerer, name string, labels ...string) (*CounterVec, error) {
 	if vec, ok := s.counters[name]; ok {
 		return vec, nil
 	}
-	vec, err = NewCounterVec(reg, name, labels...)
+
+	vec, err := NewCounterVec(reg, name, labels...)
 	s.counters[name] = vec
-	return
+	return vec, err
 }
 
-func (s *Store) getGauge(reg prometheus.Registerer, name string, labels ...string) (vec *GaugeVec, err error) {
+func (s *Store) getGauge(reg prometheus.Registerer, name string, labels ...string) (*GaugeVec, error) {
 	if vec, ok := s.gauges[name]; ok {
 		return vec, nil
 	}
-	vec, err = NewGaugeVec(reg, name, labels...)
+
+	vec, err := NewGaugeVec(reg, name, labels...)
 	s.gauges[name] = vec
-	return
+	return vec, err
 }
 
-func (s *Store) getSummary(reg prometheus.Registerer, name string, opts SummaryOpts, labels ...string) (vec *SummaryVec, err error) {
+func (s *Store) getSummary(reg prometheus.Registerer, name string, opts SummaryOpts, labels ...string) (*SummaryVec, error) {
 	if vec, ok := s.summaries[name]; ok {
 		return vec, nil
 	}
-	vec, err = NewSummaryVec(reg, name, opts, labels...)
+
+	vec, err := NewSummaryVec(reg, name, opts, labels...)
 	s.summaries[name] = vec
-	return
+	return vec, err
 }
 
-func (s *Store) getHistogram(reg prometheus.Registerer, name string, buckets []float64, labels ...string) (vec *HistogramVec, err error) {
+func (s *Store) getHistogram(reg prometheus.Registerer, name string, buckets []float64, labels ...string) (*HistogramVec, error) {
 	if vec, ok := s.histograms[name]; ok {
 		return vec, nil
 	}
-	vec, err = NewHistogramVec(reg, name, buckets, labels...)
+
+	vec, err := NewHistogramVec(reg, name, buckets, labels...)
 	s.histograms[name] = vec
-	return
+	return vec, err
 }
