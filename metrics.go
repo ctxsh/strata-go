@@ -35,10 +35,6 @@ const (
 	DefaultAgeBuckets uint32        = 5
 )
 
-var (
-	DefaultObjectives = map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
-)
-
 type SummaryOpts struct {
 	// Objectives defines the quantile rank estimates with their respective
 	// absolute error.
@@ -63,7 +59,7 @@ type MetricsOpts struct {
 	// Registry is the prometheus registry that will be used to register
 	// collectors.
 	Registry *prometheus.Registry
-	// Separator is the seperator that will be used to join the metric name
+	// Separator is the separator that will be used to join the metric name
 	// components.
 	Separator rune
 	// BindAddr is the address the promethus collector will listen on for
@@ -132,8 +128,14 @@ func (m *Metrics) Start() error {
 	mux.Handle(m.path, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
 		Timeout: DefaultTimeout,
 	}))
-	addr := fmt.Sprintf("%s:%d", m.bindAddr, m.port)
-	return http.ListenAndServe(addr, mux)
+
+	server := &http.Server{
+		Addr:        fmt.Sprintf("%s:%d", m.bindAddr, m.port),
+		ReadTimeout: DefaultTimeout,
+		Handler:     mux,
+	}
+
+	return server.ListenAndServe()
 }
 
 // WithPrefix appends additional prefix values to the metric name. By default

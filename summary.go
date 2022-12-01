@@ -23,6 +23,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var (
+	DefaultObjectives = map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001} //nolint:gochecknoglobals
+)
+
 // SummaryVec is a wrapper around the prometheus SummaryVec.
 //
 // It bundles a set of summaries used if you want to count the same thing

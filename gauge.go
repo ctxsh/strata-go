@@ -85,7 +85,7 @@ func (g *GaugeVec) Sub(v float64, lv ...string) {
 	g.vec.WithLabelValues(lv...).Sub(v)
 }
 
-// Name returns the name of the GaugeVec
+// Name returns the name of the GaugeVec.
 func (g *GaugeVec) Name() string {
 	return g.name
 }

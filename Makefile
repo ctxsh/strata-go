@@ -1,8 +1,10 @@
-# VERSION := $(shell git describe --tags)
-# BUILD := $(shell git rev-parse --short HEAD)
-# PROJECT := $(shell basename "$(PWD)")
-# LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 MAKEFLAGS += --silent
+
+deps:
+	@GOBIN=${PWD}/bin go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1
+
+lint:
+	@./bin/golangci-lint run
 
 test:
 	go test -race -cover -tags test ./...
@@ -13,11 +15,8 @@ cover:
 	open cover.html
 
 clean:
-	rm bin/$(PROJECT)
+	rm bin/*
 	go clean
-
-examples:
-	go build $(LDFLAGS) -o bin/$(PROJECT) ./examples/main.go
 
 run:
 	go run ./examples/main.go

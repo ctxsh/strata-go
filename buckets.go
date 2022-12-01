@@ -4,7 +4,7 @@ import "github.com/prometheus/client_golang/prometheus"
 
 var (
 	// DefBuckets are the default Histogram buckets.
-	DefBuckets = prometheus.DefBuckets
+	DefBuckets = prometheus.DefBuckets //nolint:gochecknoglobals
 )
 
 // The bucket functions are convienience wrappers around the prometheus

@@ -39,7 +39,7 @@ const (
 	ErrAlreadyRegistered = ApexError("metric is already registered")
 )
 
-// Error implements the error interface for ApexError
+// Error implements the error interface for ApexError.
 func (e ApexError) Error() string {
 	return string(e)
 }
@@ -74,10 +74,10 @@ func NewApexInternalErrorMetrics(prefixes []string, sep rune) *ApexInternalError
 		Name: prefix + "_already_registered",
 	}, []string{"name", "type"})
 
-	_ = register(errPanicRecovery)
-	_ = register(errInvalidMetricName)
-	_ = register(errRegistrationFailed)
-	_ = register(errAlreadyRegistered)
+	register(errPanicRecovery)
+	register(errInvalidMetricName)
+	register(errRegistrationFailed)
+	register(errAlreadyRegistered)
 
 	return &ApexInternalErrorMetrics{
 		errPanicRecovery:      errPanicRecovery,
@@ -123,11 +123,10 @@ func (a *ApexInternalErrorMetrics) AlreadyRegistered(name string, t string) {
 	}).Inc()
 }
 
-func register(metric prometheus.Collector) error {
+func register(metric prometheus.Collector) {
 	if err := prometheus.Register(metric); err != nil {
 		if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
 			panic(err)
 		}
 	}
-	return nil
 }
