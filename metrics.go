@@ -143,15 +143,15 @@ func (m *Metrics) Start() error {
 //
 //	m := apex.New(apex.MetricsOpts{})
 //	// prefix: ""
-// 	m.WithPrefix("apex", "example")
+//	m.WithPrefix("apex", "example")
 //	// prefix: "apex_example"
-// 	m.CounterInc("a_total")
-// 	// metric: "apex_example_a_total"
-// 	n := m.WithPrefix("component")
-// 	// prefix: "apex_example_component"
-// 	n.CounterInc("b_total")
+//	m.CounterInc("a_total")
+//	// metric: "apex_example_a_total"
+//	n := m.WithPrefix("component")
+//	// prefix: "apex_example_component"
+//	n.CounterInc("b_total")
 //	// metric: "apex_example_component_b_total"
-// 	m.CounterInc("c_total")
+//	m.CounterInc("c_total")
 //	// metric: "apex_example_c_total"
 func (m *Metrics) WithPrefix(prefix ...string) *Metrics {
 	p := strings.Join(prefix, string(m.separator))
@@ -164,8 +164,9 @@ func (m *Metrics) WithPrefix(prefix ...string) *Metrics {
 }
 
 // WithLabels creates a new metric with the provided labels.  Example:
-// 	metrics = metrics.WithValues("label1", "label2")
-// 	metrics.GaugeAdd("gauge_with_values", 2.0, "value1", "value2")
+//
+//	metrics = metrics.WithValues("label1", "label2")
+//	metrics.GaugeAdd("gauge_with_values", 2.0, "value1", "value2")
 func (m *Metrics) WithLabels(labels ...string) *Metrics {
 	metrics := m.copy()
 	metrics.labels = labels
@@ -263,7 +264,7 @@ func (m *Metrics) SummaryObserve(name string, v float64, lv ...string) {
 // SummaryTimer returns a Timer helper to measure duration.  ObserveDuration is
 // used to measure the time. Example:
 //
-// 	timer := m.SummaryTimer("response")
+//	timer := m.SummaryTimer("response")
 //	defer timer.ObserveDuration()
 func (m *Metrics) SummaryTimer(name string, lv ...string) *Timer {
 	defer m.recover(name, "summary_timer")
@@ -290,7 +291,7 @@ func (m *Metrics) HistogramObserve(name string, v float64, lv ...string) {
 // HistogramTimer returns a Timer helper to measure duration.  ObserveDuration is
 // used to measure the time. Example:
 //
-// 	timer := m.HistogramTimer("response")
+//	timer := m.HistogramTimer("response")
 //	defer timer.ObserveDuration()
 func (m *Metrics) HistogramTimer(name string, lv ...string) *Timer {
 	defer m.recover(name, "histogram_timer")
