@@ -437,9 +437,10 @@ func defaultedSummaryOpts(opts *SummaryOpts) *SummaryOpts {
 }
 
 func defaultedTLS(opts *TLSOpts) *TLSOpts {
-	// opts.CertFile default is ""
-	// opts.KeyFile default is ""
-	// opts.InsecureSkipVerify default is false
+	if opts == nil {
+		opts = &TLSOpts{}
+	}
+
 	if opts.MinVersion == 0 {
 		opts.MinVersion = tls.VersionTLS13
 	}
