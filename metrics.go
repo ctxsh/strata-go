@@ -20,12 +20,16 @@
 package apex
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -34,6 +38,20 @@ const (
 	DefaultMaxAge     time.Duration = 10 * time.Minute
 	DefaultAgeBuckets uint32        = 5
 )
+
+type TLSOpts struct {
+	// CertFile is the path to the file containing the SSL certificate or
+	// certificate bundle.
+	CertFile string
+	// Keyfile is the path containing the certificate key.
+	KeyFile string
+	// InsecureSkipVerify controls whether a client verifies the server's
+	// certificate chain and host name.
+	InsecureSkipVerify bool
+	// MinVersion contains the minimum TLS version that is acceptable.  By
+	// default TLS 1.3 is used.
+	MinVersion uint16
+}
 
 type SummaryOpts struct {
 	// Objectives defines the quantile rank estimates with their respective
@@ -78,6 +96,8 @@ type MetricsOpts struct {
 	PanicOnError bool
 	// Prefix is an array of prefixes that will be appended to the metric name.
 	Prefix []string
+	// TLS
+	TLS *TLSOpts
 }
 
 // Metrics provides a wrapper around the prometheus client to automatically
@@ -96,6 +116,7 @@ type Metrics struct {
 	panicOnError     bool
 	registry         *prometheus.Registry
 	registerer       prometheus.Registerer
+	tls              *TLSOpts
 }
 
 // New creates a new Apex metrics store using the options that have
@@ -104,6 +125,10 @@ func New(opts MetricsOpts) *Metrics {
 	opts = defaulted(opts)
 	prefix := strings.Join(opts.Prefix, string(opts.Separator))
 	labels := SlicePairsToMap(opts.ConstantLabels)
+
+	opts.Registry.Register(collectors.NewGoCollector())
+	opts.Registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+
 	return &Metrics{
 		prefix:           prefix,
 		separator:        opts.Separator,
@@ -118,12 +143,13 @@ func New(opts MetricsOpts) *Metrics {
 		errors:           NewApexInternalErrorMetrics(opts.Prefix, opts.Separator),
 		registry:         opts.Registry,
 		registerer:       prometheus.WrapRegistererWith(prometheus.Labels(labels), opts.Registry),
+		tls:              opts.TLS,
 	}
 }
 
 // Start creates a new http server which listens on the TCP address addr
 // and port.
-func (m *Metrics) Start() error {
+func (m *Metrics) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.Handle(m.path, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
 		Timeout: DefaultTimeout,
@@ -133,13 +159,44 @@ func (m *Metrics) Start() error {
 		Addr:        fmt.Sprintf("%s:%d", m.bindAddr, m.port),
 		ReadTimeout: DefaultTimeout,
 		Handler:     mux,
+		BaseContext: func(l net.Listener) context.Context { return ctx },
 	}
 
-	return server.ListenAndServe()
+	ch := make(chan error, 1)
+	go func() {
+		if m.tls.CertFile != "" && m.tls.KeyFile != "" {
+			fmt.Println("using tls")
+			server.TLSConfig = &tls.Config{
+				// make this configurable
+				MinVersion:         m.tls.MinVersion,
+				InsecureSkipVerify: m.tls.InsecureSkipVerify,
+			}
+
+			ch <- server.ListenAndServeTLS(m.tls.CertFile, m.tls.KeyFile)
+		} else {
+			ch <- server.ListenAndServe()
+		}
+	}()
+
+	var err error
+	select {
+	case <-ctx.Done():
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
+		defer cancel()
+		err = server.Shutdown(ctx)
+	case err = <-ch:
+		// TODO: Integrate logging, but for now just emit an unformatted error.
+		// Once logging has been integrated, we'll walk back and log all errors
+		// at any stage.
+		fmt.Printf("ERROR: %s", err.Error())
+	}
+
+	return err
 }
 
-// WithPrefix appends additional prefix values to the metric name. By default
-// metrics are created without prefixes unless added in MetricOpts. For example:
+// WithPrefix appends additional values to the metric name to prefix any new
+// metric names that are added. By default metrics are created without prefixes
+// unless added in MetricOpts. For example:
 //
 //	m := apex.New(apex.MetricsOpts{})
 //	// prefix: ""
@@ -156,7 +213,7 @@ func (m *Metrics) Start() error {
 func (m *Metrics) WithPrefix(prefix ...string) *Metrics {
 	p := strings.Join(prefix, string(m.separator))
 	newPrefix := prefixedName(m.prefix, p, m.separator)
-	metrics := m.copy()
+	metrics := m.clone()
 	metrics.prefix = newPrefix
 	// Labels are reset when a new prefix is added
 	metrics.labels = []string{}
@@ -168,7 +225,7 @@ func (m *Metrics) WithPrefix(prefix ...string) *Metrics {
 //	metrics = metrics.WithValues("label1", "label2")
 //	metrics.GaugeAdd("gauge_with_values", 2.0, "value1", "value2")
 func (m *Metrics) WithLabels(labels ...string) *Metrics {
-	metrics := m.copy()
+	metrics := m.clone()
 	metrics.labels = labels
 	return metrics
 }
@@ -304,22 +361,9 @@ func (m *Metrics) HistogramTimer(name string, lv ...string) *Timer {
 	return vec.Timer(lv...)
 }
 
-func (m *Metrics) copy() *Metrics {
-	return &Metrics{
-		prefix:           m.prefix,
-		separator:        m.separator,
-		port:             m.port,
-		path:             m.path,
-		bindAddr:         m.bindAddr,
-		histogramBuckets: m.histogramBuckets,
-		summaryOpts:      m.summaryOpts,
-		store:            m.store,
-		labels:           m.labels,
-		panicOnError:     m.panicOnError,
-		errors:           m.errors,
-		registry:         m.registry,
-		registerer:       m.registerer,
-	}
+func (m *Metrics) clone() *Metrics {
+	n := *m
+	return &n
 }
 
 func (m *Metrics) emitError(err error, name string, fn string) {
@@ -367,6 +411,8 @@ func defaulted(opts MetricsOpts) MetricsOpts {
 
 	opts.SummaryOpts = defaultedSummaryOpts(opts.SummaryOpts)
 
+	opts.TLS = defaultedTLS(opts.TLS)
+
 	return opts
 }
 
@@ -385,6 +431,17 @@ func defaultedSummaryOpts(opts *SummaryOpts) *SummaryOpts {
 
 	if opts.Objectives == nil {
 		opts.Objectives = DefaultObjectives
+	}
+
+	return opts
+}
+
+func defaultedTLS(opts *TLSOpts) *TLSOpts {
+	// opts.CertFile default is ""
+	// opts.KeyFile default is ""
+	// opts.InsecureSkipVerify default is false
+	if opts.MinVersion == 0 {
+		opts.MinVersion = tls.VersionTLS13
 	}
 
 	return opts

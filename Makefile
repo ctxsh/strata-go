@@ -21,5 +21,11 @@ clean:
 	@rm bin/*
 	@go clean
 
+gencerts:
+	pushd examples/ssl && ./gencerts.sh && popd
+
 run:
-	@go run ./examples/main.go
+	go run ./examples/main.go
+
+runssl: gencerts
+	go run ./examples/main.go -cert examples/ssl/bundle.crt -key examples/ssl/server.key
