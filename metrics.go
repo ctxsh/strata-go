@@ -193,6 +193,12 @@ func (m *Metrics) Start(ctx context.Context) error {
 	return err
 }
 
+func (m *Metrics) Handler() http.Handler {
+	return promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
+		Timeout: DefaultTimeout,
+	})
+}
+
 // WithPrefix appends additional values to the metric name to prefix any new
 // metric names that are added. By default metrics are created without prefixes
 // unless added in MetricOpts. For example:
