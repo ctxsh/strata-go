@@ -18,3 +18,7 @@ bin/
 .vscode
 
 tmp/
+
+examples/ssl/ca.*
+examples/ssl/server.*
+examples/ssl/bundle.*

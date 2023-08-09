@@ -33,7 +33,8 @@ metrics := apex.New(apex.MetricsOpts{
 | Port | `9090` | The port used by the HTTP server. |
 | Prefix | empty | An array of strings that represent the base prefix for the metric. |
 | Separator | `_` | The seperator that will be used to join the metric name components. |
-| SummaryOpts | defaults | Options used for configuring summary metrics |
+| SummaryOpts | - | Options used for configuring summary metrics |
+| TLS | - | Options used to configure TLS for the collection endpoint |
 
 #### SummaryOpts
 
@@ -43,6 +44,14 @@ metrics := apex.New(apex.MetricsOpts{
 | MaxAge | 10 minutes | MaxAge defines the duration for which an observation stays relevant for the summary. |
 | Objectives | `map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}` | Objectives defines the quantile rank estimates with their respective absolute error. |
 
+#### TLS
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| CertFile | - | The path to the file containing the certificate or the certificate bundle. |
+| InsecureSkipVerify | false | controls whether a client verifies the server's certificate chain and host name. |
+| KeyFile | - | The path to the private key file. |
+| MinVersion | TLS 1.3 | The minimum TLS version that the server will accept. |
 
 ### Prefixes and Labels
 

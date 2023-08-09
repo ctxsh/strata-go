@@ -19,7 +19,12 @@
 package main
 
 import (
+	"context"
+	"flag"
+	"fmt"
 	"math/rand"
+	"os"
+	"os/signal"
 	"sync"
 	"time"
 
@@ -36,7 +41,7 @@ func runOnce(m *apex.Metrics) {
 	defer timer.ObserveDuration()
 
 	// Counter functions
-	n := m.WithLabels("label")
+	n := m.WithPrefix("func").WithLabels("label")
 	n.CounterInc("test_counter", "value1")
 	n.CounterAdd("test_counter", 5.0, "value1")
 
@@ -54,6 +59,13 @@ func runOnce(m *apex.Metrics) {
 }
 
 func main() {
+	certFile := flag.String("cert", "", "path to the ssl cert")
+	keyFile := flag.String("key", "", "path to the ssl key")
+	flag.Parse()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	var wg sync.WaitGroup
 	metrics := apex.New(apex.MetricsOpts{
 		Separator:      ':',
@@ -65,23 +77,35 @@ func main() {
 			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 			AgeBuckets: 5,
 		},
-		HistogramBuckets: []float64{.01, .025, .05, .1, .25, .5, 1, 2.5},
+		HistogramBuckets: []float64{0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5},
+		TLS: &apex.TLSOpts{
+			CertFile: *certFile,
+			KeyFile:  *keyFile,
+		},
 	}).WithPrefix("apex", "example")
 
 	wg.Add(1)
 	go func() {
-		err := metrics.Start()
-		if err != nil {
-			panic(err)
-		}
+		defer wg.Done()
+		_ = metrics.Start(ctx)
 	}()
 
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for {
-			metrics.CounterInc("loop_total")
-			runOnce(metrics.WithPrefix("runonce"))
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				metrics.CounterInc("loop_total")
+				runOnce(metrics.WithPrefix("runonce"))
+			}
 		}
 	}()
+
+	<-ctx.Done()
+
+	fmt.Println("Shutting down")
 	wg.Wait()
 }

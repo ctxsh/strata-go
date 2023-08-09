@@ -1,7 +1,7 @@
 MAKEFLAGS += --silent
 
 deps:
-	@GOBIN=${PWD}/bin go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1
+	@GOBIN=${PWD}/bin go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3
 
 fmt:
 	@gofmt -s -w .
@@ -21,5 +21,11 @@ clean:
 	@rm bin/*
 	@go clean
 
+gencerts:
+	pushd examples/ssl && ./gencerts.sh && popd
+
 run:
-	@go run ./examples/main.go
+	go run ./examples/main.go
+
+runssl: gencerts
+	go run ./examples/main.go -cert examples/ssl/bundle.crt -key examples/ssl/server.key
