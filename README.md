@@ -21,6 +21,24 @@ metrics := apex.New(apex.MetricsOpts{
 })
 ```
 
+### Starting the collection endpoint
+
+There are two options for starting the collection endpoint.  You can start the built in HTTP(S) server or retrieve the handler to register the metrics route in an existing multiplexer/request router.
+
+To start the HTTP(S) server:
+
+```golang
+err := metrics.Start(ctx)
+```
+
+To retrieve the handler for use in an existing router:
+
+```golang
+mux := http.NewServeMux()
+mux.Handle("/metrics", metrics.Handler())
+```
+
+
 #### MetricOpts
 
 | Option | Default | Description |
