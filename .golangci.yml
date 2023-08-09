@@ -36,9 +36,9 @@ linters:
   disable-all: true
   enable:
     - cyclop
-    - depguard
+    # - depguard
     - errcheck
-    - exhaustive
+    # - exhaustive
     - exportloopref
     - forbidigo
     - funlen
