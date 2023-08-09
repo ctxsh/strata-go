@@ -126,8 +126,8 @@ func New(opts MetricsOpts) *Metrics {
 	prefix := strings.Join(opts.Prefix, string(opts.Separator))
 	labels := SlicePairsToMap(opts.ConstantLabels)
 
-	opts.Registry.Register(collectors.NewGoCollector())
-	opts.Registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	_ = opts.Registry.Register(collectors.NewGoCollector())
+	_ = opts.Registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	return &Metrics{
 		prefix:           prefix,
@@ -165,11 +165,10 @@ func (m *Metrics) Start(ctx context.Context) error {
 	ch := make(chan error, 1)
 	go func() {
 		if m.tls.CertFile != "" && m.tls.KeyFile != "" {
-			fmt.Println("using tls")
 			server.TLSConfig = &tls.Config{
 				// make this configurable
 				MinVersion:         m.tls.MinVersion,
-				InsecureSkipVerify: m.tls.InsecureSkipVerify,
+				InsecureSkipVerify: m.tls.InsecureSkipVerify, // nolint:gosec
 			}
 
 			ch <- server.ListenAndServeTLS(m.tls.CertFile, m.tls.KeyFile)
@@ -181,14 +180,14 @@ func (m *Metrics) Start(ctx context.Context) error {
 	var err error
 	select {
 	case <-ctx.Done():
-		ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
+		toCtx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
 		defer cancel()
-		err = server.Shutdown(ctx)
+		err = server.Shutdown(toCtx)
 	case err = <-ch:
 		// TODO: Integrate logging, but for now just emit an unformatted error.
 		// Once logging has been integrated, we'll walk back and log all errors
 		// at any stage.
-		fmt.Printf("ERROR: %s", err.Error())
+		fmt.Printf("ERROR: %s", err.Error()) //nolint:forbidigo
 	}
 
 	return err
@@ -437,9 +436,10 @@ func defaultedSummaryOpts(opts *SummaryOpts) *SummaryOpts {
 }
 
 func defaultedTLS(opts *TLSOpts) *TLSOpts {
-	// opts.CertFile default is ""
-	// opts.KeyFile default is ""
-	// opts.InsecureSkipVerify default is false
+	if opts == nil {
+		opts = &TLSOpts{}
+	}
+
 	if opts.MinVersion == 0 {
 		opts.MinVersion = tls.VersionTLS13
 	}

@@ -1,7 +1,7 @@
 MAKEFLAGS += --silent
 
 deps:
-	@GOBIN=${PWD}/bin go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1
+	@GOBIN=${PWD}/bin go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3
 
 fmt:
 	@gofmt -s -w .
