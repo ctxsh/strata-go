@@ -20,38 +20,14 @@
 package apex
 
 import (
-	"context"
-	"crypto/tls"
 	"fmt"
-	"net"
-	"net/http"
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
-
-const (
-	DefaultTimeout                  = 5 * time.Second
-	DefaultMaxAge     time.Duration = 10 * time.Minute
-	DefaultAgeBuckets uint32        = 5
-)
-
-type TLSOpts struct {
-	// CertFile is the path to the file containing the SSL certificate or
-	// certificate bundle.
-	CertFile string
-	// Keyfile is the path containing the certificate key.
-	KeyFile string
-	// InsecureSkipVerify controls whether a client verifies the server's
-	// certificate chain and host name.
-	InsecureSkipVerify bool
-	// MinVersion contains the minimum TLS version that is acceptable.  By
-	// default TLS 1.3 is used.
-	MinVersion uint16
-}
 
 type SummaryOpts struct {
 	// Objectives defines the quantile rank estimates with their respective
@@ -80,13 +56,6 @@ type MetricsOpts struct {
 	// Separator is the separator that will be used to join the metric name
 	// components.
 	Separator rune
-	// BindAddr is the address the promethus collector will listen on for
-	// connections.
-	BindAddr string
-	// Path is the path used by the HTTP server.
-	Path string
-	// Port is the path used by the HTTP server.
-	Port int
 	// PanicOnError maintains the default behavior of prometheus to panic on
 	// errors. If this value is set to false, the library attempts to recover
 	// from any panics and emits an internally managed metric
@@ -96,8 +65,9 @@ type MetricsOpts struct {
 	PanicOnError bool
 	// Prefix is an array of prefixes that will be appended to the metric name.
 	Prefix []string
-	// TLS
-	TLS *TLSOpts
+	// Logger takes a value that matches the Logger interface and is used for
+	// log output of errors and other debug information.
+	Logger Logger
 }
 
 // Metrics provides a wrapper around the prometheus client to automatically
@@ -105,9 +75,6 @@ type MetricsOpts struct {
 type Metrics struct {
 	separator        rune
 	prefix           string
-	path             string
-	port             int
-	bindAddr         string
 	histogramBuckets []float64
 	summaryOpts      *SummaryOpts
 	store            *Store
@@ -116,13 +83,14 @@ type Metrics struct {
 	panicOnError     bool
 	registry         *prometheus.Registry
 	registerer       prometheus.Registerer
-	tls              *TLSOpts
+	server           *Server
+	logger           Logger
 }
 
 // New creates a new Apex metrics store using the options that have
 // been provided.
 func New(opts MetricsOpts) *Metrics {
-	opts = defaulted(opts)
+	opts = defaultedMetrics(opts)
 	prefix := strings.Join(opts.Prefix, string(opts.Separator))
 	labels := SlicePairsToMap(opts.ConstantLabels)
 
@@ -132,9 +100,6 @@ func New(opts MetricsOpts) *Metrics {
 	return &Metrics{
 		prefix:           prefix,
 		separator:        opts.Separator,
-		port:             opts.Port,
-		path:             opts.Path,
-		bindAddr:         opts.BindAddr,
 		histogramBuckets: opts.HistogramBuckets,
 		summaryOpts:      opts.SummaryOpts,
 		store:            newStore(),
@@ -143,60 +108,19 @@ func New(opts MetricsOpts) *Metrics {
 		errors:           NewApexInternalErrorMetrics(opts.Prefix, opts.Separator),
 		registry:         opts.Registry,
 		registerer:       prometheus.WrapRegistererWith(prometheus.Labels(labels), opts.Registry),
-		tls:              opts.TLS,
+		logger:           opts.Logger,
 	}
 }
 
-// Start creates a new http server which listens on the TCP address addr
-// and port.
-func (m *Metrics) Start(ctx context.Context) error {
-	mux := http.NewServeMux()
-	mux.Handle(m.path, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
-		Timeout: DefaultTimeout,
-	}))
-
-	server := &http.Server{
-		Addr:        fmt.Sprintf("%s:%d", m.bindAddr, m.port),
-		ReadTimeout: DefaultTimeout,
-		Handler:     mux,
-		BaseContext: func(l net.Listener) context.Context { return ctx },
-	}
-
-	ch := make(chan error, 1)
-	go func() {
-		if m.tls.CertFile != "" && m.tls.KeyFile != "" {
-			server.TLSConfig = &tls.Config{
-				// make this configurable
-				MinVersion:         m.tls.MinVersion,
-				InsecureSkipVerify: m.tls.InsecureSkipVerify, // nolint:gosec
-			}
-
-			ch <- server.ListenAndServeTLS(m.tls.CertFile, m.tls.KeyFile)
-		} else {
-			ch <- server.ListenAndServe()
-		}
-	}()
-
-	var err error
-	select {
-	case <-ctx.Done():
-		toCtx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
-		defer cancel()
-		err = server.Shutdown(toCtx)
-	case err = <-ch:
-		// TODO: Integrate logging, but for now just emit an unformatted error.
-		// Once logging has been integrated, we'll walk back and log all errors
-		// at any stage.
-		fmt.Printf("ERROR: %s", err.Error()) //nolint:forbidigo
-	}
-
-	return err
+// Start creates and starts a new HTTP server.  It blocks until Stop is called.
+func (m *Metrics) Start(opts ServerOpts) error {
+	m.server = newServer(opts).WithLogger(m.logger)
+	return m.server.Start(m.registry)
 }
 
-func (m *Metrics) Handler() http.Handler {
-	return promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
-		Timeout: DefaultTimeout,
-	})
+// Stop shuts down the HTTP server gracefully.
+func (m *Metrics) Stop() {
+	m.server.Stop()
 }
 
 // WithPrefix appends additional values to the metric name to prefix any new
@@ -386,7 +310,7 @@ func (m *Metrics) emitError(err error, name string, fn string) {
 	}
 }
 
-func defaulted(opts MetricsOpts) MetricsOpts {
+func defaultedMetrics(opts MetricsOpts) MetricsOpts {
 	// opts.Prefix default is empty
 	// opts.MustRegister default is false
 	// opts.PanicOnError default is false
@@ -398,25 +322,16 @@ func defaulted(opts MetricsOpts) MetricsOpts {
 		opts.HistogramBuckets = DefBuckets
 	}
 
-	if opts.BindAddr == "" {
-		opts.BindAddr = "0.0.0.0"
-	}
-
-	if opts.Path == "" {
-		opts.Path = "/metrics"
-	}
-
-	if opts.Port == 0 {
-		opts.Port = 9090
-	}
-
 	if opts.Separator == 0 {
 		opts.Separator = '_'
 	}
 
-	opts.SummaryOpts = defaultedSummaryOpts(opts.SummaryOpts)
+	if opts.Logger == nil {
+		// nil logger that discards all logs.
+		opts.Logger = logr.New(nil)
+	}
 
-	opts.TLS = defaultedTLS(opts.TLS)
+	opts.SummaryOpts = defaultedSummaryOpts(opts.SummaryOpts)
 
 	return opts
 }
@@ -441,21 +356,18 @@ func defaultedSummaryOpts(opts *SummaryOpts) *SummaryOpts {
 	return opts
 }
 
-func defaultedTLS(opts *TLSOpts) *TLSOpts {
-	if opts == nil {
-		opts = &TLSOpts{}
-	}
-
-	if opts.MinVersion == 0 {
-		opts.MinVersion = tls.VersionTLS13
-	}
-
-	return opts
-}
-
 func (m *Metrics) recover(name string, fn string) {
 	if !m.panicOnError {
 		if r := recover(); r != nil {
+			var err error
+			switch e := r.(type) {
+			case error:
+				err = e
+			default:
+				err = fmt.Errorf("unknown error")
+			}
+
+			m.logger.Error(err, "panic", true, fmt.Errorf("panic recovery"), "name", name, "func", fn)
 			m.errors.PanicRecovery(name, fn)
 		}
 	}
