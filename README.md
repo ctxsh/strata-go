@@ -25,10 +25,24 @@ metrics := apex.New(apex.MetricsOpts{
 
 There are two options for starting the collection endpoint.  You can start the built in HTTP(S) server or retrieve the handler to register the metrics route in an existing multiplexer/request router.
 
-To start the HTTP(S) server:
+To start a standard http server:
 
 ```golang
-err := metrics.Start(ctx)
+err := metrics.Start(ctx, apex.ServerOpts{
+	Port: 9090,
+})
+```
+
+To start an http server with TLS support, at minimum you must provide the key and the certificate:
+
+```golang
+err := metrics.Start(ctx, apex.ServerOpts{
+	Port: 9090,
+	TLS: &apex.TLSOpts{
+		CertFile: *certFile,
+		KeyFile:  *keyFile,
+	},
+})
 ```
 
 To retrieve the handler for use in an existing router:
@@ -36,6 +50,26 @@ To retrieve the handler for use in an existing router:
 ```golang
 mux := http.NewServeMux()
 mux.Handle("/metrics", metrics.Handler())
+```
+
+### Shutdown the collection endpoint
+
+To ensure that all metrics have been flushed and scraped, the default behavior is to require the manual shutdown of the metrics collection endpoint.  To shutdown the endpoint, use the following method:
+
+```golang
+go func() {
+	_ = metrics.Start(ctx, apex.ServerOpts{})
+}
+
+var wg sync.WaitGroup
+wg.Add(1)
+go func() {
+	defer wg.Done()
+	myApp.Start()
+}
+
+wg.Wait()
+metrics.Stop()
 ```
 
 
@@ -46,6 +80,7 @@ mux.Handle("/metrics", metrics.Handler())
 | BindAddr | `0.0.0.0` | The address the promethus collector will listen on for connections |
 | ConstantLabels | empty | An array of label/value pairs that will be constant across all metrics. |
 | HistogramBuckets | `[]float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}` | Buckets used for histogram observation counts |
+| Logger | nil | Provide a logger that implements the `Logger` interface.  A valid logger must have the following methods defined: `Info(msg string, keysAndValues ...any)` and `Error(err error, msg string, keysAndValues ...any)` | 
 | PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `apex_errors_panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |
 | Path | `/metrics` | The path used by the HTTP server. |
 | Port | `9090` | The port used by the HTTP server. |

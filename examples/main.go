@@ -21,7 +21,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -29,6 +28,9 @@ import (
 	"time"
 
 	"ctx.sh/apex"
+	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func random(min int, max int) float64 {
@@ -63,14 +65,33 @@ func main() {
 	keyFile := flag.String("key", "", "path to the ssl key")
 	flag.Parse()
 
+	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.EncodeTime = zapcore.RFC3339TimeEncoder
+	zapCfg := zap.Config{
+		Level:         zap.NewAtomicLevelAt(zap.InfoLevel),
+		Development:   false,
+		Sampling:      nil,
+		Encoding:      "console",
+		EncoderConfig: encoderCfg,
+		OutputPaths: []string{
+			"stderr",
+		},
+		ErrorOutputPaths: []string{
+			"stderr",
+		},
+	}
+
+	zl := zap.Must(zapCfg.Build())
+	defer zl.Sync()
+	logger := zapr.NewLogger(zl)
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	var wg sync.WaitGroup
 	metrics := apex.New(apex.MetricsOpts{
+		Logger:         logger,
 		Separator:      ':',
 		PanicOnError:   true,
-		Port:           9090,
 		ConstantLabels: []string{"role", "server"},
 		SummaryOpts: &apex.SummaryOpts{
 			MaxAge:     10 * time.Minute,
@@ -78,21 +99,31 @@ func main() {
 			AgeBuckets: 5,
 		},
 		HistogramBuckets: []float64{0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5},
-		TLS: &apex.TLSOpts{
-			CertFile: *certFile,
-			KeyFile:  *keyFile,
-		},
 	}).WithPrefix("apex", "example")
 
-	wg.Add(1)
+	var obs sync.WaitGroup
+	obs.Add(1)
 	go func() {
-		defer wg.Done()
-		_ = metrics.Start(ctx)
+		defer obs.Done()
+		logger.Info("starting metrics")
+		err := metrics.Start(apex.ServerOpts{
+			Port:                   9090,
+			TerminationGracePeriod: 10 * time.Second,
+			TLS: &apex.TLSOpts{
+				CertFile: *certFile,
+				KeyFile:  *keyFile,
+			},
+		})
+		if err != nil {
+			panic("could not start metrics")
+		}
 	}()
 
-	wg.Add(1)
+	var app sync.WaitGroup
+	app.Add(1)
 	go func() {
-		defer wg.Done()
+		defer app.Done()
+		logger.Info("Starting services")
 		for {
 			select {
 			case <-ctx.Done():
@@ -105,7 +136,12 @@ func main() {
 	}()
 
 	<-ctx.Done()
+	logger.Info("signal caught, waiting for app to shut down.")
+	app.Wait()
 
-	fmt.Println("Shutting down")
-	wg.Wait()
+	logger.Info("app has shut down, waiting for metrics to shut down.")
+	metrics.Stop()
+	obs.Wait()
+
+	logger.Info("finished")
 }
