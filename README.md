@@ -21,7 +21,29 @@ metrics := apex.New(apex.MetricsOpts{
 })
 ```
 
-### Starting the collection endpoint
+#### MetricOpts
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| ConstantLabels | empty | An array of label/value pairs that will be constant across all metrics. |
+| HistogramBuckets | `[]float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}` | Buckets used for histogram observation counts |
+| Logger | nil | Provide a logger that implements the `Logger` interface.  A valid logger must have the following methods defined: `Info(msg string, keysAndValues ...any)` and `Error(err error, msg string, keysAndValues ...any)` | 
+| PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `apex_errors_panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |
+| Prefix | empty | An array of strings that represent the base prefix for the metric. |
+| Separator | `_` | The seperator that will be used to join the metric name components. |
+| SummaryOpts | see below | Options used for configuring summary metrics |
+
+#### SummaryOpts
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| AgeBuckets | `5` | AgeBuckets is the number of buckets used to exclude observations that are older than MaxAge from the summary. |
+| MaxAge | `10 minutes` | MaxAge defines the duration for which an observation stays relevant for the summary. |
+| Objectives | `map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}` | Objectives defines the quantile rank estimates with their respective absolute error. |
+
+## Starting and Stopping the collection endpoints
+
+### Starting
 
 There are two options for starting the collection endpoint.  You can start the built in HTTP(S) server or retrieve the handler to register the metrics route in an existing multiplexer/request router.
 
@@ -52,11 +74,33 @@ mux := http.NewServeMux()
 mux.Handle("/metrics", metrics.Handler())
 ```
 
+
+#### ServerOpts
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| BindAddr | `0.0.0.0` | The address the promethus collector will listen on for connections |
+| TerminationGracePeriod | `0` |  |
+| Path | `/metrics` | The path used by the HTTP server. |
+| Port | `9090` | The port used by the HTTP server. |
+| TLS | see below | Options used to configure TLS for the collection endpoint |
+
+#### TLS
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| CertFile | - | The path to the file containing the certificate or the certificate bundle. |
+| InsecureSkipVerify | false | controls whether a client verifies the server's certificate chain and host name. |
+| KeyFile | - | The path to the private key file. |
+| MinVersion | TLS 1.3 | The minimum TLS version that the server will accept. |
+
 ### Shutdown the collection endpoint
 
-To ensure that all metrics have been flushed and scraped, the default behavior is to require the manual shutdown of the metrics collection endpoint.  To shutdown the endpoint, use the following method:
+To ensure that all metrics have been flushed and scraped, the default behavior is to require the manual shutdown of the metrics collection endpoint.  To shutdown the endpoint, use the `Stop()` method:
 
 ```golang
+metrics := apex.New(apex.MetricsOpts{})
+
 go func() {
 	_ = metrics.Start(ctx, apex.ServerOpts{})
 }
@@ -67,44 +111,12 @@ go func() {
 	defer wg.Done()
 	myApp.Start()
 }
-
 wg.Wait()
+
 metrics.Stop()
 ```
 
-
-#### MetricOpts
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| BindAddr | `0.0.0.0` | The address the promethus collector will listen on for connections |
-| ConstantLabels | empty | An array of label/value pairs that will be constant across all metrics. |
-| HistogramBuckets | `[]float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}` | Buckets used for histogram observation counts |
-| Logger | nil | Provide a logger that implements the `Logger` interface.  A valid logger must have the following methods defined: `Info(msg string, keysAndValues ...any)` and `Error(err error, msg string, keysAndValues ...any)` | 
-| PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `apex_errors_panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |
-| Path | `/metrics` | The path used by the HTTP server. |
-| Port | `9090` | The port used by the HTTP server. |
-| Prefix | empty | An array of strings that represent the base prefix for the metric. |
-| Separator | `_` | The seperator that will be used to join the metric name components. |
-| SummaryOpts | - | Options used for configuring summary metrics |
-| TLS | - | Options used to configure TLS for the collection endpoint |
-
-#### SummaryOpts
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| AgeBuckets | 5 | AgeBuckets is the number of buckets used to exclude observations that are older than MaxAge from the summary. |
-| MaxAge | 10 minutes | MaxAge defines the duration for which an observation stays relevant for the summary. |
-| Objectives | `map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}` | Objectives defines the quantile rank estimates with their respective absolute error. |
-
-#### TLS
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| CertFile | - | The path to the file containing the certificate or the certificate bundle. |
-| InsecureSkipVerify | false | controls whether a client verifies the server's certificate chain and host name. |
-| KeyFile | - | The path to the private key file. |
-| MinVersion | TLS 1.3 | The minimum TLS version that the server will accept. |
+## API
 
 ### Prefixes and Labels
 
