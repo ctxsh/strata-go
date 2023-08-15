@@ -367,7 +367,7 @@ func (m *Metrics) recover(name string, fn string) {
 				err = fmt.Errorf("unknown error")
 			}
 
-			m.logger.Error(err, "panic", true, fmt.Errorf("panic recovery"), "name", name, "func", fn)
+			m.logger.Error(err, "panic recovery", "name", name, "func", fn)
 			m.errors.PanicRecovery(name, fn)
 		}
 	}

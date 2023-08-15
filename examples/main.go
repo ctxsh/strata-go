@@ -43,18 +43,20 @@ func runOnce(m *apex.Metrics) {
 	defer timer.ObserveDuration()
 
 	// Counter functions
-	n := m.WithPrefix("func").WithLabels("label")
-	n.CounterInc("test_counter", "value1")
-	n.CounterAdd("test_counter", 5.0, "value1")
+	n := m.WithPrefix("func").WithLabels("label", "another")
+	n.CounterInc("test_counter", "value1", "another1")
+	n.CounterAdd("test_counter", 5.0, "value1", "another2")
+	n.CounterInc("test_counter", "value2", "another1")
+	n.CounterAdd("test_counter", 2.0, "value2", "another2")
 
 	// Gauge functions
-	n.GaugeInc("test_gauge", "value2")
-	n.GaugeSet("test_gauge", random(1, 100), "value2")
-	n.GaugeAdd("test_gauge", 2.0, "value2")
-	n.GaugeSub("test_gauge", 1.0, "value2")
+	n.GaugeInc("test_gauge", "value2", "another1")
+	n.GaugeSet("test_gauge", random(1, 100), "value2", "another1")
+	n.GaugeAdd("test_gauge", 2.0, "value2", "another1")
+	n.GaugeSub("test_gauge", 1.0, "value2", "another1")
 
 	// Summary observation
-	n.SummaryObserve("test_summary", random(0, 10), "value3")
+	n.SummaryObserve("test_summary", random(0, 10), "value3", "another1")
 
 	delay := time.Duration(random(1, 1500)) * time.Millisecond
 	time.Sleep(delay)
