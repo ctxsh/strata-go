@@ -1,6 +1,10 @@
 package apex
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"sync"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 // Store manages all of the prometheus collectors.
 type Store struct {
@@ -8,6 +12,12 @@ type Store struct {
 	gauges     map[string]*GaugeVec
 	summaries  map[string]*SummaryVec
 	histograms map[string]*HistogramVec
+	// TODO: part of the issue with the race condition was that we were
+	// setting the metric store value to nil and not revisiting.  This will
+	// pretty much address the double register race that caused the nil, but
+	// I need to come back through this and make the check/get more resilient
+	// so I can shrink the footprint of the lock.
+	sync.Mutex
 }
 
 func newStore() *Store {
@@ -20,6 +30,9 @@ func newStore() *Store {
 }
 
 func (s *Store) getCounter(reg prometheus.Registerer, name string, labels ...string) (*CounterVec, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	if vec, ok := s.counters[name]; ok {
 		return vec, nil
 	}
@@ -30,6 +43,9 @@ func (s *Store) getCounter(reg prometheus.Registerer, name string, labels ...str
 }
 
 func (s *Store) getGauge(reg prometheus.Registerer, name string, labels ...string) (*GaugeVec, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	if vec, ok := s.gauges[name]; ok {
 		return vec, nil
 	}
@@ -40,6 +56,9 @@ func (s *Store) getGauge(reg prometheus.Registerer, name string, labels ...strin
 }
 
 func (s *Store) getSummary(reg prometheus.Registerer, name string, opts SummaryOpts, labels ...string) (*SummaryVec, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	if vec, ok := s.summaries[name]; ok {
 		return vec, nil
 	}
@@ -50,6 +69,9 @@ func (s *Store) getSummary(reg prometheus.Registerer, name string, opts SummaryO
 }
 
 func (s *Store) getHistogram(reg prometheus.Registerer, name string, buckets []float64, labels ...string) (*HistogramVec, error) {
+	s.Lock()
+	defer s.Unlock()
+
 	if vec, ok := s.histograms[name]; ok {
 		return vec, nil
 	}
