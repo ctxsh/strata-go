@@ -1,4 +1,4 @@
-# Strata - Prometheus Client [![unit tests](https://github.com/ctxswitch/strata-go/actions/workflows/test.yml/badge.svg)](https://github.com/ctxswitch/strata-go/actions/workflows/test.yml)
+# Strata - Prometheus Client [![unit tests](https://github.com/ctxsh/strata-go/actions/workflows/test.yml/badge.svg)](https://github.com/ctxswitch/strata-go/actions/workflows/test.yml)
 
 The Strata Go package provides a wrapper around the prometheus client to automatically register and collect metrics.
 
