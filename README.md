@@ -1,20 +1,20 @@
-# Apex - Prometheus Client [![unit tests](https://github.com/ctxswitch/apex-go/actions/workflows/test.yml/badge.svg)](https://github.com/ctxswitch/apex-go/actions/workflows/test.yml)
+# Strata - Prometheus Client [![unit tests](https://github.com/ctxswitch/strata-go/actions/workflows/test.yml/badge.svg)](https://github.com/ctxswitch/strata-go/actions/workflows/test.yml)
 
-The Apex Go package provides a wrapper around the prometheus client to automatically register and collect metrics.
+The Strata Go package provides a wrapper around the prometheus client to automatically register and collect metrics.
 
 ## Install
 
 ```
-go get ctx.sh/apex
+go get ctx.sh/strata
 ```
 
 ## Usage
 
 ### Initialize
 
-Initialize the metrics collectors using the `apex.New` function.  There are several options available.  As an example:
+Initialize the metrics collectors using the `strata.New` function.  There are several options available.  As an example:
 ```golang
-metrics := apex.New(apex.MetricsOpts{
+metrics := strata.New(strata.MetricsOpts{
 	ConstantLabels: []string{"role", "server"},
 	Separator:    ':',
 	PanicOnError: false,
@@ -28,7 +28,7 @@ metrics := apex.New(apex.MetricsOpts{
 | ConstantLabels | empty | An array of label/value pairs that will be constant across all metrics. |
 | HistogramBuckets | `[]float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}` | Buckets used for histogram observation counts |
 | Logger | nil | Provide a logger that implements the `Logger` interface.  A valid logger must have the following methods defined: `Info(msg string, keysAndValues ...any)` and `Error(err error, msg string, keysAndValues ...any)` | 
-| PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `apex_errors_panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |
+| PanicOnError | `false` | Maintain the default behavior of prometheus to panic on errors.  If this value is set to false, the library attempts to recover from any panics and emits an internally managed metric `strata_errors_panic_recovery` to inform the operator that visibility is degraded.  If set to true the original behavior is maintained and all errors are treated as panics. |
 | Prefix | empty | An array of strings that represent the base prefix for the metric. |
 | Separator | `_` | The seperator that will be used to join the metric name components. |
 | SummaryOpts | see below | Options used for configuring summary metrics |
@@ -50,7 +50,7 @@ There are two options for starting the collection endpoint.  You can start the b
 To start a standard http server:
 
 ```golang
-err := metrics.Start(ctx, apex.ServerOpts{
+err := metrics.Start(ctx, strata.ServerOpts{
 	Port: 9090,
 })
 ```
@@ -58,9 +58,9 @@ err := metrics.Start(ctx, apex.ServerOpts{
 To start an http server with TLS support, at minimum you must provide the key and the certificate:
 
 ```golang
-err := metrics.Start(ctx, apex.ServerOpts{
+err := metrics.Start(ctx, strata.ServerOpts{
 	Port: 9090,
-	TLS: &apex.TLSOpts{
+	TLS: &strata.TLSOpts{
 		CertFile: *certFile,
 		KeyFile:  *keyFile,
 	},
@@ -99,10 +99,10 @@ mux.Handle("/metrics", metrics.Handler())
 To ensure that all metrics have been flushed and scraped, the default behavior is to require the manual shutdown of the metrics collection endpoint.  To shutdown the endpoint, use the `Stop()` method:
 
 ```golang
-metrics := apex.New(apex.MetricsOpts{})
+metrics := strata.New(strata.MetricsOpts{})
 
 go func() {
-	_ = metrics.Start(ctx, apex.ServerOpts{})
+	_ = metrics.Start(ctx, strata.ServerOpts{})
 }
 
 var wg sync.WaitGroup
@@ -125,7 +125,7 @@ metrics.Stop()
 The `WithLabels` function adds labels to the metrics.  If labels are added to metrics, the subsequent metrics must include the label values.  Each metric function includes a variadic parameter that is used to pass in the values in the order that the labels were previously passed.
 
 ```go
-m := apex.New(apex.MetricsOpts{})
+m := strata.New(strata.MetricsOpts{})
 n := m.WithLabels("label1", "label2")
 n.CounterInc("a_total", "value1", "value2")
 ```
@@ -135,18 +135,18 @@ n.CounterInc("a_total", "value1", "value2")
 The `WithPrefix` function appends additional prefix values to the metric name.  By default metrics are created without prefixes unless added in `MetricOpts`.  For example:
 
 ```go
-m := apex.New(apex.MetricsOpts{})
+m := strata.New(strata.MetricsOpts{})
 // prefix: ""
-m.WithPrefix("apex", "example")
-// prefix: "apex_example"
+m.WithPrefix("strata", "example")
+// prefix: "strata_example"
 m.CounterInc("a_total")
-// metric: "apex_example_a_total"
+// metric: "strata_example_a_total"
 n := m.WithPrefix("component")
-// prefix: "apex_example_component"
+// prefix: "strata_example_component"
 n.CounterInc("b_total")
-// metric: "apex_example_component_b_total"
+// metric: "strata_example_component_b_total"
 m.CounterInc("c_total")
-// metric: "apex_example_c_total"
+// metric: "strata_example_c_total"
 ```
 
 ### Counter
@@ -257,7 +257,7 @@ A histogram samples observations and counts them in configurable buckets. Most o
 Add a single observation to the histogram.
 
 ```go
-m := apex.New(apex.MetricsOpts{
+m := strata.New(strata.MetricsOpts{
 	HistogramBuckets: []float{0.01, 0.5, 0.1, 1, 5, 10}
 })
 
@@ -274,8 +274,8 @@ metrics.HistogramObserve("my_histogram", response_time, "value1", "value2")
 Create a histogram timer. 
 
 ```go
-m := apex.New(apex.MetricsOpts{
-	HistogramBuckets: apex.ExponentialBuckets(100, 1.2, 3)
+m := strata.New(strata.MetricsOpts{
+	HistogramBuckets: strata.ExponentialBuckets(100, 1.2, 3)
 })
 
 // Without labels
@@ -301,8 +301,8 @@ A summary samples observations and calculates quantiles over a sliding time wind
 Add a single observations to the summary
 
 ```go
-m := apex.New(apex.MetricsOpts{
-	SummaryOpts: &apex.SummaryOpts{
+m := strata.New(strata.MetricsOpts{
+	SummaryOpts: &strata.SummaryOpts{
 		MaxAge:     10 * time.Minute,
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		AgeBuckets: 5,
@@ -322,8 +322,8 @@ metrics.SummaryObserve("test_summary", response, "value1", "value2")
 Create a summary timer. 
 
 ```go
-m := apex.New(apex.MetricsOpts{
-	SummaryOpts: &apex.SummaryOpts{
+m := strata.New(strata.MetricsOpts{
+	SummaryOpts: &strata.SummaryOpts{
 		MaxAge:     10 * time.Minute,
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		AgeBuckets: 5,
