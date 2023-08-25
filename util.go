@@ -17,7 +17,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package apex
+package strata
 
 import (
 	"github.com/prometheus/client_golang/prometheus"

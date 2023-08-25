@@ -1,4 +1,4 @@
-module ctx.sh/apex
+module ctx.sh/strata
 
 go 1.19
 

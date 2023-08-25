@@ -17,7 +17,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package apex
+package strata
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,23 +26,23 @@ import (
 type MetricType string
 
 const (
-	// CounterType represents an apex wrapper around the prometheus CounterVec
+	// CounterType represents an strata wrapper around the prometheus CounterVec
 	// type.
 	CounterType MetricType = "counter"
-	// GaugeType represents an apex wrapper around the prometheus GaugeVec
+	// GaugeType represents an strata wrapper around the prometheus GaugeVec
 	// type.
 	GaugeType MetricType = "gauge"
-	// SummaryType represents an apex wrapper around the prometheus SummaryVec
+	// SummaryType represents an strata wrapper around the prometheus SummaryVec
 	// type.
 	SummaryType MetricType = "summary"
-	// HistogramType represents an apex wrapper around the prometheus HistogramVec
+	// HistogramType represents an strata wrapper around the prometheus HistogramVec
 	// type.
 	HistogramType MetricType = "histogram"
 	// Defines the metrics help string.  This is currently not settable.
-	DefaultHelpString string = "created automagically by apex"
+	DefaultHelpString string = "created automagically by strata"
 )
 
-// MetricVec defines the interface for apex metrics collector wrappers.
+// MetricVec defines the interface for strata metrics collector wrappers.
 type MetricVec interface {
 	Name() string
 	Type() MetricType

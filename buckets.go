@@ -1,4 +1,4 @@
-package apex
+package strata
 
 import "github.com/prometheus/client_golang/prometheus"
 

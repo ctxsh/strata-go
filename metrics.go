@@ -17,7 +17,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package apex
+package strata
 
 import (
 	"fmt"
@@ -59,7 +59,7 @@ type MetricsOpts struct {
 	// PanicOnError maintains the default behavior of prometheus to panic on
 	// errors. If this value is set to false, the library attempts to recover
 	// from any panics and emits an internally managed metric
-	// apex_errors_panic_recovery to inform the operator that visibility is
+	// strata_errors_panic_recovery to inform the operator that visibility is
 	// degraded. If set to true the original behavior is maintained and all
 	// errors are treated as panics.
 	PanicOnError bool
@@ -127,18 +127,18 @@ func (m *Metrics) Stop() {
 // metric names that are added. By default metrics are created without prefixes
 // unless added in MetricOpts. For example:
 //
-//	m := apex.New(apex.MetricsOpts{})
+//	m := strata.New(strata.MetricsOpts{})
 //	// prefix: ""
-//	m.WithPrefix("apex", "example")
-//	// prefix: "apex_example"
+//	m.WithPrefix("strata", "example")
+//	// prefix: "strata_example"
 //	m.CounterInc("a_total")
-//	// metric: "apex_example_a_total"
+//	// metric: "strata_example_a_total"
 //	n := m.WithPrefix("component")
-//	// prefix: "apex_example_component"
+//	// prefix: "strata_example_component"
 //	n.CounterInc("b_total")
-//	// metric: "apex_example_component_b_total"
+//	// metric: "strata_example_component_b_total"
 //	m.CounterInc("c_total")
-//	// metric: "apex_example_c_total"
+//	// metric: "strata_example_c_total"
 func (m *Metrics) WithPrefix(prefix ...string) *Metrics {
 	p := strings.Join(prefix, string(m.separator))
 	newPrefix := prefixedName(m.prefix, p, m.separator)
