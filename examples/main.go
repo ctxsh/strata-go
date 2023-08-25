@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"ctx.sh/apex"
+	"ctx.sh/strata"
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -37,7 +37,7 @@ func random(min int, max int) float64 {
 	return float64(min) + rand.Float64()*(float64(max-min))
 }
 
-func runOnce(m *apex.Metrics) {
+func runOnce(m *strata.Metrics) {
 	// Histogram timer
 	timer := m.HistogramTimer("latency")
 	defer timer.ObserveDuration()
@@ -90,28 +90,28 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	metrics := apex.New(apex.MetricsOpts{
+	metrics := strata.New(strata.MetricsOpts{
 		Logger:         logger,
 		Separator:      ':',
 		PanicOnError:   true,
 		ConstantLabels: []string{"role", "server"},
-		SummaryOpts: &apex.SummaryOpts{
+		SummaryOpts: &strata.SummaryOpts{
 			MaxAge:     10 * time.Minute,
 			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 			AgeBuckets: 5,
 		},
 		HistogramBuckets: []float64{0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5},
-	}).WithPrefix("apex", "example")
+	}).WithPrefix("strata", "example")
 
 	var obs sync.WaitGroup
 	obs.Add(1)
 	go func() {
 		defer obs.Done()
 		logger.Info("starting metrics")
-		err := metrics.Start(apex.ServerOpts{
+		err := metrics.Start(strata.ServerOpts{
 			Port:                   9090,
 			TerminationGracePeriod: 10 * time.Second,
-			TLS: &apex.TLSOpts{
+			TLS: &strata.TLSOpts{
 				CertFile: *certFile,
 				KeyFile:  *keyFile,
 			},

@@ -1,4 +1,4 @@
-package apex
+package strata
 
 type Logger interface {
 	Info(msg string, keysAndValues ...any)

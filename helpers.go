@@ -17,7 +17,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package apex
+package strata
 
 import (
 	"strconv"
@@ -50,7 +50,7 @@ func createPromString(name string, ctype MetricType, labels map[string]string, v
 	var builder strings.Builder
 	builder.WriteString("# HELP ")
 	builder.WriteString(name + " ")
-	builder.WriteString(" created automagically by apex\n")
+	builder.WriteString(" created automagically by strata\n")
 	builder.WriteString("# TYPE ")
 	builder.WriteString(name + " ")
 	builder.WriteString(string(ctype) + "\n")

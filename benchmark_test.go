@@ -1,4 +1,4 @@
-package apex
+package strata
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ func BenchmarkMain(b *testing.B) {
 		Separator:    '_',
 		Registry:     registry,
 		PanicOnError: true,
-	}).WithPrefix("apex", "example").WithLabels("role")
+	}).WithPrefix("strata", "example").WithLabels("role")
 
 	for i := 0; i < 1000000; i++ {
 		metrics.CounterInc("foo", "example")

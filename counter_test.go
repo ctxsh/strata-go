@@ -1,4 +1,4 @@
-package apex
+package strata
 
 import (
 	"testing"
@@ -23,7 +23,7 @@ func TestCounterWithLabels(t *testing.T) {
 	labels := map[string]string{
 		"label": "one",
 	}
-
+	
 	reg := prometheus.NewPedanticRegistry()
 	vec, err := NewCounterVec(reg, "test_total", "label")
 	assert.NoError(t, err)
