@@ -25,22 +25,27 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type ApexError string
+type StrataError string
 
 const (
 	// ErrInvalidMetricName is returned when a metric name contains other
 	// characters other than [a-zA-Z_-].
-	ErrInvalidMetricName = ApexError("Invalid metric name")
+	ErrInvalidMetricName = StrataError("Invalid metric name")
 	// ErrRegistrationFailed is returned if prometheus is unable to register
 	// the collector.
-	ErrRegistrationFailed = ApexError("Unable to register collector")
+	ErrRegistrationFailed = StrataError("Unable to register collector")
 	// ErrAlreadyRegistered is returned if prometheus has already registered
 	// a collector.
-	ErrAlreadyRegistered = ApexError("metric is already registered")
+	ErrAlreadyRegistered = StrataError("metric is already registered")
+	// ErrNoMetrics is returned if the context does not contain the metrics
+	// key.
+	ErrNoMetrics = StrataError("no metrics found in context")
+	// ErrNilContext is returned if the context is nil.
+	ErrNilContext = StrataError("context is nil")
 )
 
-// Error implements the error interface for ApexError.
-func (e ApexError) Error() string {
+// Error implements the error interface for StrataError.
+func (e StrataError) Error() string {
 	return string(e)
 }
 
