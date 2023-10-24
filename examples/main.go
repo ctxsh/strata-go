@@ -37,7 +37,11 @@ func random(min int, max int) float64 {
 	return float64(min) + rand.Float64()*(float64(max-min))
 }
 
-func runOnce(m *strata.Metrics) {
+func runOnce(ctx context.Context) error {
+	m, err := strata.FromContext(ctx)
+	if err != nil {
+		return err
+	}
 	// Histogram timer
 	timer := m.HistogramTimer("latency")
 	defer timer.ObserveDuration()
@@ -60,6 +64,8 @@ func runOnce(m *strata.Metrics) {
 
 	delay := time.Duration(random(1, 1500)) * time.Millisecond
 	time.Sleep(delay)
+
+	return nil
 }
 
 func main() {
@@ -132,7 +138,9 @@ func main() {
 				return
 			default:
 				metrics.CounterInc("loop_total")
-				runOnce(metrics.WithPrefix("runonce"))
+				// This looks odd, but it's not meant to be used this way in normal conditions.
+				// I just want to test out the context functions.
+				_ = runOnce(strata.IntoContext(ctx, metrics.WithPrefix("runOnce")))
 			}
 		}
 	}()
