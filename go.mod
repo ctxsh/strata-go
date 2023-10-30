@@ -3,7 +3,7 @@ module ctx.sh/strata
 go 1.19
 
 require (
-	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/logr v1.3.0
 	github.com/go-logr/zapr v1.2.4
 	github.com/prometheus/client_golang v1.16.0
 	github.com/stretchr/testify v1.8.4
