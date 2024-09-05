@@ -114,7 +114,7 @@ func main() {
 	go func() {
 		defer obs.Done()
 		logger.Info("starting metrics")
-		err := metrics.Start(strata.ServerOpts{
+		err := metrics.Start(ctx, strata.ServerOpts{
 			Port:                   9090,
 			TerminationGracePeriod: 10 * time.Second,
 			TLS: &strata.TLSOpts{
@@ -150,7 +150,6 @@ func main() {
 	app.Wait()
 
 	logger.Info("app has shut down, waiting for metrics to shut down.")
-	metrics.Stop()
 	obs.Wait()
 
 	logger.Info("finished")

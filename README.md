@@ -52,6 +52,7 @@ To start a standard http server:
 ```golang
 err := metrics.Start(ctx, strata.ServerOpts{
 	Port: 9090,
+	TerminationGracePeriod: 10 * time.Second
 })
 ```
 
@@ -96,12 +97,15 @@ mux.Handle("/metrics", metrics.Handler())
 
 ### Shutdown the collection endpoint
 
-To ensure that all metrics have been flushed and scraped, the default behavior is to require the manual shutdown of the metrics collection endpoint.  To shutdown the endpoint, use the `Stop()` method:
+The metrics http collection endpoint will shutdown automatically when the context is closed.  You can control the shutdown time by setting a grace period for the collection endpoint to remain active before shutting down to ensure that the final metrics are scraped.
 
 ```golang
 metrics := strata.New(strata.MetricsOpts{})
 
+var obs sync.WaitGroup
+obs.Add(1)
 go func() {
+	defer obs.Done()
 	_ = metrics.Start(ctx, strata.ServerOpts{})
 }
 
@@ -112,8 +116,7 @@ go func() {
 	myApp.Start()
 }
 wg.Wait()
-
-metrics.Stop()
+obs.Wait()
 ```
 
 ## API

@@ -20,7 +20,10 @@
 package strata
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -112,15 +115,20 @@ func New(opts MetricsOpts) *Metrics {
 	}
 }
 
-// Start creates and starts a new HTTP server.  It blocks until Stop is called.
-func (m *Metrics) Start(opts ServerOpts) error {
+// Start starts the HTTP server.  It blocks until Stop is called.
+func (m *Metrics) Start(ctx context.Context, opts ServerOpts) error {
 	m.server = newServer(opts).WithLogger(m.logger)
-	return m.server.Start(m.registry)
+	err := m.server.Start(ctx, m.registry)
+	if !errors.Is(err, http.ErrServerClosed) {
+		m.logger.Error(err, "prometheus collector endpoint error")
+	}
+
+	return nil
 }
 
 // Stop shuts down the HTTP server gracefully.
 func (m *Metrics) Stop() {
-	m.server.Stop()
+	// Stop has been deprecated in favor of using the callers context.
 }
 
 // WithPrefix appends additional values to the metric name to prefix any new
