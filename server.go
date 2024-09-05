@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -76,7 +77,7 @@ func newServer(opts ServerOpts) *Server {
 
 // Start creates a new http server which listens on the TCP address addr
 // and port.
-func (s *Server) Start(reg *prometheus.Registry) error {
+func (s *Server) Start(ctx context.Context, reg *prometheus.Registry) error {
 	mux := http.NewServeMux()
 	mux.Handle(s.path, promhttp.HandlerFor(reg, promhttp.HandlerOpts{
 		Timeout: DefaultTimeout,
@@ -86,33 +87,31 @@ func (s *Server) Start(reg *prometheus.Registry) error {
 		Addr:        fmt.Sprintf("%s:%d", s.bindAddr, s.port),
 		ReadTimeout: DefaultTimeout,
 		Handler:     mux,
+		BaseContext: func(_ net.Listener) context.Context {
+			return ctx
+		},
 	}
 
-	ch := make(chan error, 1)
 	go func() {
-		if s.tlsCertFile != "" && s.tlsKeyFile != "" {
-			server.TLSConfig = &tls.Config{
-				MinVersion:         s.tlsMinVersion,
-				InsecureSkipVerify: s.tlsInsecureSkipVerify, // nolint:gosec
-			}
-
-			s.logger.Info("starting prometheus collector endpoint", "tls", true, "config", s.config())
-			ch <- server.ListenAndServeTLS(s.tlsCertFile, s.tlsKeyFile)
-		} else {
-			s.logger.Info("starting prometheus collector endpoint", "tls", false, "config", s.config())
-			ch <- server.ListenAndServe()
+		<-ctx.Done()
+		time.Sleep(s.terminationGracePeriod)
+		if err := shutdown(server); err != nil {
+			s.logger.Error(err, "shutting down prometheus collector endpoint")
 		}
 	}()
 
-	var err error
-	select {
-	case <-s.stopChan:
-		err = shutdown(server)
-	case err = <-ch:
-		s.logger.Error(err, "prometheus collector endpoint error")
+	if s.tlsCertFile != "" && s.tlsKeyFile != "" {
+		server.TLSConfig = &tls.Config{
+			MinVersion:         s.tlsMinVersion,
+			InsecureSkipVerify: s.tlsInsecureSkipVerify, // nolint:gosec
+		}
+
+		s.logger.Info("starting prometheus collector endpoint", "tls", true, "config", s.config())
+		return server.ListenAndServeTLS(s.tlsCertFile, s.tlsKeyFile)
 	}
 
-	return err
+	s.logger.Info("starting prometheus collector endpoint", "tls", false, "config", s.config())
+	return server.ListenAndServe()
 }
 
 // Stop closes the stop channel which initiates the shutdown of the HTTP server.
